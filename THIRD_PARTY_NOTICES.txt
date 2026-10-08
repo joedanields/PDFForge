@@ -1,0 +1,31 @@
+PDFForge — Third-Party Notices
+==============================
+
+This file lists third-party components distributed with PDFForge and their licenses.
+It is shipped with the installer and shown in Settings > About.
+
+STATUS: Phase 0 placeholder. Full license texts are collected before the first release
+(see docs/09_LICENSING.md, section 4).
+
+Components bundled in Phase 0
+-----------------------------
+- Tauri                     MIT / Apache-2.0
+- React, React DOM          MIT
+- Tailwind CSS              MIT
+- Radix UI (via shadcn/ui)  MIT
+- Lucide icons              ISC
+- Zustand                   MIT
+- zod                       MIT
+- pdf.js (pdfjs-dist)       Apache-2.0
+- rusqlite / SQLite         MIT / Public Domain
+- Python                    PSF License
+- pikepdf                   MPL-2.0
+- qpdf                      Apache-2.0
+- pypdf                     BSD-3-Clause
+- pypdfium2 / PDFium        Apache-2.0 / BSD-3-Clause
+- pdfplumber, pdfminer.six  MIT
+- Pillow                    MIT-CMU (HPND)
+- img2pdf                   LGPL-3.0 (used unmodified as a separate library)
+- PyInstaller bootloader    GPL-2.0 with bootloader exception
+
+No AGPL components (Ghostscript, MuPDF/PyMuPDF, pdf2docx) are included.

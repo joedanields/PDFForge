@@ -1,0 +1,35 @@
+# Vendor binaries are fetched by scripts/fetch-vendor.ps1, never committed
+/vendor/*
+!/vendor/README.md
+
+# Node / UI
+node_modules/
+app/dist/
+app/coverage/
+*.tsbuildinfo
+
+# Rust / Tauri
+app/src-tauri/target/
+app/src-tauri/gen/
+# Frozen engine copied in by scripts/build-engine.ps1
+app/src-tauri/resources/engine/*
+!app/src-tauri/resources/engine/.gitkeep
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+engine/build/
+engine/dist/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
