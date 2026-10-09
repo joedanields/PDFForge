@@ -1,0 +1,66 @@
+[project]
+name = "pdfforge-engine"
+version = "0.1.0"
+description = "PDFForge processing engine (JSON-lines RPC sidecar)"
+requires-python = ">=3.12,<3.13"
+# Phase 0 runtime deps. Later phases add python-docx, python-pptx, openpyxl, reportlab,
+# pillow-heif, ocrmypdf, pyhanko (see docs/06_BUILD_AND_PACKAGING.md §3).
+# AGPL-free by decision: no Ghostscript, PyMuPDF or pdf2docx.
+dependencies = [
+    "pikepdf>=9.4",
+    "pypdf>=5.1",
+    "pypdfium2>=4.30",
+    "pdfplumber>=0.11",
+    "Pillow>=11.0",
+    "img2pdf>=0.5.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-xdist>=3.6",
+    "pytest-cov>=6.0",
+    "reportlab>=4.2",
+    "ruff>=0.8",
+    "black>=24.10",
+    "mypy>=1.13",
+    "pyinstaller>=6.11",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["tools", "utils", "jobs", "protocol", "main"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ANN", "PTH"]
+ignore = ["ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN"]
+"engine.spec" = ["ALL"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["main.py", "jobs.py", "protocol.py", "tools", "utils", "tests"]
+exclude = ["build/", "dist/"]
+
+[[tool.mypy.overrides]]
+module = ["img2pdf", "pypdfium2", "reportlab.*", "pdfplumber"]
+ignore_missing_imports = true
