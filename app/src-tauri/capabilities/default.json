@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Minimal permissions for the main window (docs/05_NON_FUNCTIONAL.md S8). Opening and revealing outputs goes through app commands, not the opener JS API.",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:allow-open"]
+}
