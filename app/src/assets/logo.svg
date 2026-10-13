@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- PDFForge original mark: a page with a folded corner over a teal tile, with a forge spark -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14897e"/>
+      <stop offset="1" stop-color="#0b4f4a"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="960" height="960" rx="216" fill="url(#bg)"/>
+  <path d="M300 200h300l160 160v440a40 40 0 0 1-40 40H300a40 40 0 0 1-40-40V240a40 40 0 0 1 40-40z" fill="#f4fbfa"/>
+  <path d="M600 200v120a40 40 0 0 0 40 40h120z" fill="#a9ded8"/>
+  <rect x="340" y="470" width="260" height="44" rx="22" fill="#0b4f4a" opacity=".85"/>
+  <rect x="340" y="560" width="340" height="44" rx="22" fill="#0b4f4a" opacity=".55"/>
+  <rect x="340" y="650" width="200" height="44" rx="22" fill="#0b4f4a" opacity=".55"/>
+  <path d="M720 560l34 82 82 34-82 34-34 82-34-82-82-34 82-34z" fill="#f2a93b"/>
+</svg>

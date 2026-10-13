@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* PDFForge design tokens (original palette; see docs/04_UI_UX.md §3). HSL triplets. */
+@layer base {
+  :root {
+    --primary: 174 72% 26%;
+    --primary-foreground: 0 0% 100%;
+    --surface: 210 20% 99%;
+    --surface-2: 210 18% 95%;
+    --border: 214 16% 85%;
+    --ring: 174 72% 32%;
+    --text: 220 26% 14%;
+    --text-muted: 218 12% 40%;
+    --success: 152 61% 30%;
+    --warning: 36 92% 36%;
+    --danger: 358 66% 46%;
+
+    --cat-organize: 27 88% 44%;
+    --cat-optimize: 145 58% 32%;
+    --cat-convert: 213 78% 45%;
+    --cat-edit: 268 56% 50%;
+    --cat-security: 215 20% 38%;
+    --cat-intelligence: 322 60% 45%;
+
+    color-scheme: light;
+  }
+
+  .dark {
+    --primary: 172 60% 45%;
+    --primary-foreground: 180 30% 8%;
+    --surface: 222 22% 10%;
+    --surface-2: 220 18% 15%;
+    --border: 218 14% 26%;
+    --ring: 172 60% 52%;
+    --text: 210 20% 94%;
+    --text-muted: 215 14% 68%;
+    --success: 150 50% 52%;
+    --warning: 38 90% 60%;
+    --danger: 0 76% 66%;
+
+    --cat-organize: 28 90% 60%;
+    --cat-optimize: 145 50% 52%;
+    --cat-convert: 211 85% 66%;
+    --cat-edit: 267 75% 74%;
+    --cat-security: 214 18% 70%;
+    --cat-intelligence: 322 70% 70%;
+
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-surface font-sans text-sm text-text antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-surface;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
