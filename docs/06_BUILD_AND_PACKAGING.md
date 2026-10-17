@@ -39,29 +39,32 @@ ocrmypdf, pyhanko, camelot-py (optional)
 
 ## 4. Build steps
 1. `scripts/fetch-vendor.ps1` — download LibreOffice, Ghostscript, Tesseract; verify SHA-256; trim unneeded LibreOffice components (help, extensions, Java) to shrink size.
-2. `scripts/build-engine.ps1`
+2. `scripts/build-engine.ps1` — freezes the engine with PyInstaller in **onedir** mode
+   (faster start than onefile), smoke-tests it with a `hello` handshake, and stages the whole
+   folder for bundling:
    ```powershell
    cd engine
-   pyinstaller engine.spec --noconfirm
-   # output: dist/engine/engine.exe (onedir is faster to start than onefile)
-   copy dist\engine\engine.exe ..\app\src-tauri\binaries\engine-x86_64-pc-windows-msvc.exe
+   uv sync --frozen
+   uv run pyinstaller engine.spec --noconfirm --clean
+   # output: dist/engine/engine.exe + dist/engine/_internal/
+   # copied to app/src-tauri/resources/engine/ (git-ignored except .gitkeep)
    ```
-   Tauri sidecars require the target-triple suffix in the file name.
-3. Configure `app/src-tauri/tauri.conf.json`:
+   The engine is **not** a Tauri `externalBin` sidecar: a onedir `engine.exe` cannot run without
+   its `_internal/` folder, so the whole folder ships as a resource and the Rust shell starts
+   `resource_dir()/engine/engine.exe` itself (with `CREATE_NO_WINDOW`).
+   In dev builds (`pnpm tauri dev`) the shell instead runs `uv run python main.py` in `engine/`.
+3. `app/src-tauri/tauri.conf.json` (relevant parts):
    ```json
    {
      "productName": "PDFForge",
-     "identifier": "com.yourname.pdfforge",
+     "identifier": "com.joedaniel.pdfforge",
      "bundle": {
        "active": true,
        "targets": ["nsis"],
-       "externalBin": ["binaries/engine"],
        "resources": {
-         "../../vendor/libreoffice": "vendor/libreoffice",
-         "../../vendor/ghostscript": "vendor/ghostscript",
-         "../../vendor/tesseract": "vendor/tesseract"
+         "resources/engine/": "engine/",
+         "../../THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt"
        },
-       "fileAssociations": [{ "ext": ["pdf"], "name": "PDF Document", "role": "Viewer" }],
        "windows": {
          "webviewInstallMode": { "type": "embedBootstrapper" },
          "nsis": { "installMode": "currentUser", "languages": ["English"] }
@@ -69,15 +72,24 @@ ocrmypdf, pyhanko, camelot-py (optional)
      }
    }
    ```
-   (If PyInstaller is built in *onedir* mode, ship the whole `engine/` folder as a resource and launch it via its path instead of `externalBin`.)
-4. `cd app && pnpm install && pnpm tauri build`
+   Phase 0: the `vendor/` folders (LibreOffice, Tesseract; Ghostscript pending the AGPL decision
+   in 09 §3) are added to `resources` in Phase 2. The `.pdf` file association is added together
+   with the built-in viewer (Phase 3), so "Open with PDFForge" never lands on a dead end.
+4. `cd app && pnpm install --frozen-lockfile && pnpm tauri build --bundles nsis`
 5. Output: `app/src-tauri/target/release/bundle/nsis/PDFForge_x.y.z_x64-setup.exe`
 
-`scripts/build-all.ps1` runs steps 1–4 end to end.
+`scripts/build-all.ps1` runs steps 1–4 end to end, after checking that the version in
+`tauri.conf.json` matches `Cargo.toml`, `package.json` and `engine/protocol.py`
+(`-SkipEngine` reuses an already staged engine).
 
 ## 5. Code signing
 - Obtain an OV/EV code-signing certificate (or Azure Trusted Signing) — unsigned installers trigger SmartScreen warnings.
 - Sign `engine.exe`, the app exe, and the installer (`signtool sign /fd sha256 /tr <timestamp-url> /td sha256 ...`). Tauri can sign automatically via `bundle.windows.certificateThumbprint` or a custom `signCommand`.
+- Implemented as opt-in: builds are **unsigned by default**. Set `PDFFORGE_SIGN_THUMBPRINT`
+  (SHA-1 thumbprint of a certificate in the Windows store; optional `PDFFORGE_SIGN_TIMESTAMP_URL`,
+  default DigiCert) and `build-engine.ps1` signs `engine.exe` with signtool while `build-all.ps1`
+  passes `certificateThumbprint` to `tauri build`, which signs the app exe and the installer.
+  Without it the scripts print an **UNSIGNED BUILD** warning before and after the build.
 
 ## 6. Auto-update
 - Tauri updater plugin with a signed `latest.json` hosted on GitHub Releases or your server.
