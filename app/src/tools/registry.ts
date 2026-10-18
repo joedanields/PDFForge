@@ -348,6 +348,50 @@ export const pdfToImageOptions = z.object({
   zip: opt.bool("Put the images in a .zip", false, "Otherwise they go into a new folder."),
 });
 
+const PERMISSION_HELP = "Viewers enforce these; a permissions password is needed to change them.";
+
+export const protectOptions = z.object({
+  user_password: opt.password(
+    "Password to open",
+    "Anyone opening the PDF will need it. Leave empty to only restrict what people can do.",
+  ),
+  user_password_confirm: opt.confirm("Repeat the password", "user_password", {
+    showWhenFilled: "user_password",
+  }),
+  allow_print: opt.choice(
+    "Printing",
+    [
+      { value: "high", label: "Allowed" },
+      { value: "low", label: "Low quality" },
+      { value: "none", label: "No" },
+    ],
+    "high",
+    PERMISSION_HELP,
+    { segmented: true },
+  ),
+  allow_copy: opt.bool("Allow copying text and images", true),
+  allow_edit: opt.bool("Allow editing and page changes", true),
+  allow_forms: opt.bool("Allow filling in forms", true),
+  allow_annotate: opt.bool("Allow comments and annotations", true),
+  owner_password: opt.password(
+    "Permissions password",
+    "Optional. Needed later to lift the restrictions. Must differ from the open password.",
+  ),
+  owner_password_confirm: opt.confirm("Repeat the permissions password", "owner_password", {
+    showWhenFilled: "owner_password",
+  }),
+  encryption: opt.choice(
+    "Encryption",
+    [
+      { value: "aes256", label: "AES-256" },
+      { value: "aes128", label: "AES-128" },
+    ],
+    "aes256",
+    "AES-256 is the strongest; AES-128 only for very old PDF readers.",
+    { segmented: true },
+  ),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -823,18 +867,38 @@ export const TOOLS: readonly ToolDef[] = [
   }),
 
   // ── F. Security ───────────────────────────────────────────────────────────────────────────
-  soon({
+  {
     id: "protect",
     ref: "F1",
     name: "Protect PDF",
     description: "Add a password and control printing, copying and editing.",
     category: "security",
     icon: Lock,
-    accepts: manyPdfs,
+    accepts: onePdf,
+    optionsSchema: protectOptions,
+    status: "available",
     priority: "must",
     phase: 1,
-    keywords: ["password", "encrypt"],
-  }),
+    engineMethod: "protect",
+    actionLabel: "Protect PDF",
+    keywords: ["password", "encrypt", "lock", "permissions", "secure"],
+    check: (o) => {
+      const user = typeof o.user_password === "string" ? o.user_password : "";
+      const owner = typeof o.owner_password === "string" ? o.owner_password : "";
+      if (!user && !owner)
+        return "Set a password to open the file, a permissions password, or both.";
+      if (user && owner && user === owner) {
+        return "Use a different permissions password than the open password.";
+      }
+      return null;
+    },
+    summary: (s) => {
+      const method = s.encryption === "aes128" ? "AES-128" : "AES-256";
+      return s.open_password === true
+        ? `Password protected (${method})`
+        : `Permissions restricted (${method})`;
+    },
+  },
   soon({
     id: "unlock",
     ref: "F2",

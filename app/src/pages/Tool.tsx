@@ -22,6 +22,7 @@ import { cn, fileName } from "@/lib/utils";
 import { CATEGORY_META } from "@/tools/categories";
 import {
   defaultOptions,
+  confirmError,
   describeOptions,
   isVisible,
   pageFieldError,
@@ -271,9 +272,14 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     blocker = t("tool.fixErrors");
   } else {
     for (const field of describeOptions(tool.optionsSchema)) {
-      if (field.kind !== "pages" || !isVisible(field, options)) continue;
-      const text = typeof options[field.key] === "string" ? (options[field.key] as string) : "";
-      const error = pageFieldError(field, text, pageCount);
+      if (!isVisible(field, options)) continue;
+      let error: string | null = null;
+      if (field.kind === "pages") {
+        const text = typeof options[field.key] === "string" ? (options[field.key] as string) : "";
+        error = pageFieldError(field, text, pageCount);
+      } else if (field.meta.confirmOf) {
+        error = confirmError(field, options);
+      }
       if (error) {
         blocker = `${field.meta.label}: ${error}`;
         break;

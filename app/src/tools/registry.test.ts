@@ -33,6 +33,7 @@ const IMPLEMENTED = [
   "rotate",
   "image-to-pdf",
   "pdf-to-image",
+  "protect",
 ];
 
 describe("tool registry contents", () => {

@@ -1,3 +1,5 @@
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 import type { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +11,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { passwordStrength } from "@/lib/passwordStrength";
 import { cn } from "@/lib/utils";
-import { describeOptions, isVisible, pageFieldError, type FieldDescriptor } from "@/tools/options";
+import {
+  confirmError,
+  describeOptions,
+  isVisible,
+  pageFieldError,
+  type FieldDescriptor,
+} from "@/tools/options";
 
 interface Props {
   schema: z.AnyZodObject;
@@ -36,6 +45,7 @@ export function OptionsForm({ schema, value, onChange, disabled = false, pageCou
           onChange={(v) => set(field.key, v)}
           disabled={disabled}
           pageCount={pageCount ?? null}
+          values={value}
         />
       ))}
     </div>
@@ -48,9 +58,11 @@ interface FieldProps {
   onChange: (value: unknown) => void;
   disabled: boolean;
   pageCount: number | null;
+  /** All current option values (for confirmation fields). */
+  values: Record<string, unknown>;
 }
 
-function Field({ field, value, onChange, disabled, pageCount }: FieldProps) {
+function Field({ field, value, onChange, disabled, pageCount, values }: FieldProps) {
   const id = `opt-${field.key}`;
   const helpId = field.meta.help ? `${id}-help` : undefined;
   const help = field.meta.help && (
@@ -159,6 +171,21 @@ function Field({ field, value, onChange, disabled, pageCount }: FieldProps) {
     );
   }
 
+  if (field.kind === "password") {
+    return (
+      <PasswordField
+        id={id}
+        field={field}
+        value={typeof value === "string" ? value : ""}
+        onChange={onChange}
+        disabled={disabled}
+        error={confirmError(field, { ...values, [field.key]: value })}
+        help={help}
+        helpId={helpId}
+      />
+    );
+  }
+
   const isNumber = field.kind === "number";
   return (
     <div className="space-y-2">
@@ -182,6 +209,91 @@ function Field({ field, value, onChange, disabled, pageCount }: FieldProps) {
         disabled={disabled}
         aria-describedby={helpId}
       />
+      {help}
+    </div>
+  );
+}
+
+const METER = ["bg-danger", "bg-danger", "bg-warning", "bg-success", "bg-success"] as const;
+
+function PasswordField({
+  id,
+  field,
+  value,
+  onChange,
+  disabled,
+  error,
+  help,
+  helpId,
+}: {
+  id: string;
+  field: FieldDescriptor;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+  error: string | null;
+  help: React.ReactNode;
+  helpId: string | undefined;
+}) {
+  const [visible, setVisible] = useState(false);
+  const strength = field.meta.strength && value ? passwordStrength(value) : null;
+  const errorId = `${id}-error`;
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{field.meta.label}</Label>
+      <div className="relative">
+        <Input
+          id={id}
+          type={visible ? "text" : "password"}
+          autoComplete="new-password"
+          spellCheck={false}
+          value={value}
+          maxLength={127}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={
+            [helpId, error ? errorId : undefined].filter(Boolean).join(" ") || undefined
+          }
+          className={cn("pr-10", error && "border-danger")}
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? `Hide ${field.meta.label}` : `Show ${field.meta.label}`}
+          className="absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded text-text-muted hover:text-text"
+          disabled={disabled}
+        >
+          {visible ? (
+            <EyeOff className="size-4" aria-hidden />
+          ) : (
+            <Eye className="size-4" aria-hidden />
+          )}
+        </button>
+      </div>
+      {strength && (
+        <div className="space-y-1" aria-live="polite">
+          <div className="flex gap-1" aria-hidden>
+            {[0, 1, 2, 3].map((i) => (
+              <span
+                key={i}
+                className={cn(
+                  "h-1.5 flex-1 rounded-full",
+                  i < Math.max(1, strength.score) ? METER[strength.score] : "bg-surface-2",
+                )}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-text-muted">
+            Strength: <span className="font-medium text-text">{strength.label}</span>
+          </p>
+        </div>
+      )}
+      {error && (
+        <p id={errorId} className="text-xs text-danger" role="alert">
+          {error}
+        </p>
+      )}
       {help}
     </div>
   );

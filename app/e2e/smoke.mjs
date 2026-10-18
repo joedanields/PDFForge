@@ -21,6 +21,7 @@ const AVAILABLE = [
   "organize",
   "image-to-pdf",
   "pdf-to-image",
+  "protect",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -56,6 +57,7 @@ await page.setViewportSize({ width: 1400, height: 900 }).catch(() => {});
 
 // ── helpers ──────────────────────────────────────────────────────────────────────────────────
 async function shot(name) {
+  await page.waitForTimeout(250); // let CSS transitions settle
   if (shots)
     await page.screenshot({ path: join(shots, `${String(++step).padStart(2, "0")}-${name}.png`) });
 }
@@ -446,6 +448,43 @@ if (section("toimage")) {
   expect(!(await page.getByText("Resolution").isVisible()), "render options hidden for extraction");
   const text2 = await runAndWait("Convert to images");
   expect(text2.includes("Extracted 2 images"), "embedded pictures extracted");
+}
+
+if (section("protect")) {
+  console.log("Protect (from a merge with a protected input)");
+  await go("#/tool/merge");
+  await addFiles("Chapter 2.pdf", "secret.pdf");
+  await page.getByLabel("Password: secret.pdf").fill("pw123");
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await page.waitForFunction(() => !document.body.innerText.includes("Password protected"));
+  await runAndWait("Merge PDF");
+  const merged = await page.locator("main section p.truncate").first().getAttribute("title");
+  await page.getByRole("button", { name: "Protect this file" }).click();
+  await page.waitForURL(/#\/tool\/protect/);
+  await page.getByText(merged.split(/[\\/]/).pop()).first().waitFor();
+  ok("'Protect this file' opens Protect with the merged file pre-loaded");
+  const run = page.getByRole("button", { name: "Protect PDF", exact: true });
+  await page.getByText("Set a password to open the file").waitFor();
+  expect(await run.isDisabled(), "Run disabled until a password is set");
+  await page.getByLabel("Password to open", { exact: true }).fill("password1");
+  await page.getByText("Very weak").waitFor();
+  await page.getByLabel("Password to open", { exact: true }).fill("Correct-Horse-7");
+  await page.getByText("Strong").first().waitFor();
+  ok("strength meter: Very weak → Strong");
+  await page.getByLabel("Repeat the password", { exact: true }).fill("Correct-Horse-8");
+  await page.locator("#opt-user_password_confirm-error").waitFor();
+  expect(await run.isDisabled(), "mismatched confirmation blocks Run");
+  await page.getByLabel("Repeat the password", { exact: true }).fill("Correct-Horse-7");
+  await page.getByRole("switch", { name: "Allow copying text and images" }).click();
+  await page.getByRole("radio", { name: "Low quality" }).click();
+  await shot("protect-ready");
+  const text = await runAndWait("Protect PDF");
+  expect(text.includes("Password protected (AES-256)"), "result: Password protected (AES-256)");
+  expect(/_protect( \(\d+\))?\.pdf/.test(text), "output named *_protect.pdf");
+  const history = await page.evaluate(() =>
+    window.__TAURI_INTERNALS__.invoke("list_recents", { limit: 1 }),
+  );
+  expect(history[0]?.tool === "protect", "recorded in recent outputs");
 }
 
 if (!only || only.has("echo") || echoOnly) {

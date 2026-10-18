@@ -22,6 +22,12 @@ export interface FieldMeta {
   showWhen?: { key: string; values: readonly string[] };
   /** Secret values (passwords) are sent outside `options` and never stored in history. */
   secret?: boolean;
+  /** Password field: show a strength meter. */
+  strength?: boolean;
+  /** Confirmation of another (secret) field: checked in the UI, never sent to the engine. */
+  confirmOf?: string;
+  /** Only show this field once another text option is filled in. */
+  showWhenFilled?: string;
   placeholder?: string;
 }
 
@@ -73,12 +79,24 @@ export const opt = {
   text(label: string, defaultValue: string, help?: string, extra?: Extra) {
     return withMeta(z.string().default(defaultValue), { label, help, ...extra });
   },
+  password(label: string, help?: string, extra?: Extra) {
+    return withMeta(z.string().max(127).default(""), {
+      label,
+      help,
+      secret: true,
+      strength: true,
+      ...extra,
+    });
+  },
+  confirm(label: string, of: string, extra?: Extra) {
+    return withMeta(z.string().default(""), { label, secret: true, confirmOf: of, ...extra });
+  },
   pages(label: string, help: string, emptyMeansAll: boolean, extra?: Extra) {
     return withMeta(z.string().default(""), { label, help, pages: { emptyMeansAll }, ...extra });
   },
 };
 
-export type FieldKind = "boolean" | "enum" | "number" | "string" | "pages";
+export type FieldKind = "boolean" | "enum" | "number" | "string" | "pages" | "password";
 
 export interface FieldDescriptor {
   key: string;
@@ -123,12 +141,18 @@ export function describeOptions(schema: z.AnyZodObject): FieldDescriptor[] {
         max: inner.maxValue ?? undefined,
       };
     }
-    return { key, kind: meta.pages ? "pages" : "string", meta, defaultValue };
+    const kind: FieldKind = meta.pages ? "pages" : meta.secret ? "password" : "string";
+    return { key, kind, meta, defaultValue };
   });
 }
 
 /** Is this field visible for the current option values? */
 export function isVisible(field: FieldDescriptor, values: Record<string, unknown>): boolean {
+  const filled = field.meta.showWhenFilled;
+  if (filled !== undefined) {
+    const value = values[filled];
+    if (typeof value !== "string" || value === "") return false;
+  }
   const rule = field.meta.showWhen;
   if (!rule) return true;
   return rule.values.includes(String(values[rule.key]));
@@ -146,12 +170,11 @@ export function splitSecrets(
 ): { options: Record<string, unknown>; secrets: Record<string, unknown> } {
   const options: Record<string, unknown> = {};
   const secrets: Record<string, unknown> = {};
-  const secretKeys = new Set(
-    describeOptions(schema)
-      .filter((f) => f.meta.secret)
-      .map((f) => f.key),
-  );
+  const fields = describeOptions(schema);
+  const secretKeys = new Set(fields.filter((f) => f.meta.secret).map((f) => f.key));
+  const confirmKeys = new Set(fields.filter((f) => f.meta.confirmOf).map((f) => f.key));
   for (const [key, value] of Object.entries(values)) {
+    if (confirmKeys.has(key)) continue; // UI-only
     (secretKeys.has(key) ? secrets : options)[key] = value;
   }
   return { options, secrets };
@@ -167,4 +190,17 @@ export function pageFieldError(
   if (text.trim() === "") return field.meta.pages.emptyMeansAll ? null : "Select at least one page";
   const result = parseRanges(text, pageCount);
   return result.ok ? null : result.error;
+}
+
+/** Message for a confirmation field that doesn't match, or null. */
+export function confirmError(
+  field: FieldDescriptor,
+  values: Record<string, unknown>,
+): string | null {
+  const of = field.meta.confirmOf;
+  if (!of) return null;
+  const original = values[of];
+  const confirm = values[field.key];
+  if (typeof original !== "string" || original === "") return null;
+  return confirm === original ? null : "The passwords don't match";
 }
