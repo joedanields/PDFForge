@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { z } from "zod";
 import type { ToolCategory } from "./categories";
+import { parseRanges } from "@/lib/pageRanges";
 import { opt } from "./options";
 
 export type ToolStatus = "available" | "coming-soon";
@@ -82,7 +83,14 @@ export interface ToolDef {
    * "organize": page board built from one or more PDFs. */
   layout?: "files" | "pages" | "organize";
   /** pages layout: the page-range option that mirrors the grid selection. */
-  pageSelection?: { option: string; tone?: "select" | "remove" };
+  pageSelection?: {
+    option: string;
+    tone?: "select" | "remove";
+    /** The grid only selects while another option has one of these values. */
+    activeWhen?: { key: string; values: readonly string[] };
+  };
+  /** pages layout: small label on a page tile, e.g. which output file it goes to. */
+  pageBadge?: (options: Record<string, unknown>, index: number, pageCount: number) => string | null;
   /** pages layout: clockwise rotation to preview on a page, in degrees. */
   previewRotation?: (options: Record<string, unknown>, page: PagePreview) => number;
   /** Turn validated form values into the engine's `options`. */
@@ -192,6 +200,67 @@ export const extractOptions = z.object({
   }),
 });
 
+export const splitOptions = z.object({
+  mode: opt.choice(
+    "Split",
+    [
+      { value: "ranges", label: "By page ranges" },
+      { value: "fixed", label: "Every N pages" },
+      { value: "all", label: "Into single pages" },
+      { value: "size", label: "By file size" },
+      { value: "bookmarks", label: "By bookmarks (chapters)" },
+    ],
+    "ranges",
+  ),
+  ranges: opt.pages(
+    "Ranges",
+    "Each range becomes its own file, e.g. 1-3, 4-7, 8. Selecting pages in the grid adds them.",
+    false,
+    { showWhen: { key: "mode", values: ["ranges"] }, placeholder: "e.g. 1-3, 4-7, 8" },
+  ),
+  merge_ranges: opt.bool("Combine the ranges into one file", false, undefined, {
+    showWhen: { key: "mode", values: ["ranges"] },
+  }),
+  every: opt.int("Pages per file", 1, 10_000, 2, undefined, {
+    showWhen: { key: "mode", values: ["fixed"] },
+  }),
+  max_mb: opt.number(
+    "Maximum file size (MB)",
+    0.1,
+    2000,
+    5,
+    "Pages are grouped so that no file is larger than this. A single page that is already larger gets its own file.",
+    { showWhen: { key: "mode", values: ["size"] } },
+  ),
+  zip: opt.bool("Put the files in a .zip", false, "Otherwise they go into a new folder."),
+});
+
+/** Which output file each page goes to, for the modes where that is known up front. */
+function splitBadge(
+  options: Record<string, unknown>,
+  index: number,
+  pageCount: number,
+): string | null {
+  const mode = options.mode;
+  if (mode === "all") return `File ${index + 1}`;
+  if (mode === "fixed") {
+    const every = typeof options.every === "number" && options.every > 0 ? options.every : 1;
+    return `File ${Math.floor(index / every) + 1}`;
+  }
+  if (mode !== "ranges" || typeof options.ranges !== "string" || !options.ranges.trim()) {
+    return null;
+  }
+  const result = parseRanges(options.ranges, pageCount);
+  if (!result.ok) return null;
+  const page = index + 1;
+  const files = result.ranges
+    .map((r, n) => (page >= r.first && page <= r.last ? n + 1 : 0))
+    .filter((n) => n > 0);
+  if (files.length === 0) return null;
+  if (options.merge_ranges === true) return "Included";
+  return files.length === 1 ? `File ${files[0]}` : `Files ${files.join(", ")}`;
+}
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -221,7 +290,7 @@ export const TOOLS: readonly ToolDef[] = [
     actionLabel: "Merge PDF",
     keywords: ["combine", "join", "append"],
   },
-  soon({
+  {
     id: "split",
     ref: "A2",
     name: "Split PDF",
@@ -229,10 +298,36 @@ export const TOOLS: readonly ToolDef[] = [
     category: "organize",
     icon: Scissors,
     accepts: onePdf,
+    optionsSchema: splitOptions,
+    status: "available",
     priority: "must",
     phase: 1,
-    keywords: ["separate", "ranges", "divide"],
-  }),
+    engineMethod: "split",
+    actionLabel: "Split PDF",
+    keywords: ["separate", "ranges", "divide", "chapters"],
+    layout: "pages",
+    pageSelection: { option: "ranges", activeWhen: { key: "mode", values: ["ranges"] } },
+    pageBadge: splitBadge,
+    toEngine: (o) => ({
+      mode: o.mode,
+      ranges: o.ranges,
+      merge_ranges: o.merge_ranges,
+      every: o.every,
+      max_mb: o.max_mb,
+      zip: o.zip,
+    }),
+    summary: (s) => {
+      if (typeof s.files !== "number") return null;
+      if (s.files === 1 && typeof s.ranges === "number") {
+        return `Combined ${s.ranges} ranges into one file`;
+      }
+      const big =
+        typeof s.oversized_pages === "number"
+          ? ` · ${s.oversized_pages} ${s.oversized_pages === 1 ? "page is" : "pages are"} larger than the limit on their own`
+          : "";
+      return `Split into ${s.files} files${big}`;
+    },
+  },
   {
     id: "remove-pages",
     ref: "A3",

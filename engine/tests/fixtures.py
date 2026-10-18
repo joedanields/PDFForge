@@ -204,3 +204,33 @@ def make_restricted_pdf(path: Path, pages: int, owner_password: str = "owner-sec
         )
     plain.unlink()
     return path
+
+
+def make_image_pdf(
+    path: Path,
+    pages: int,
+    pixels: tuple[int, int] = (800, 1000),
+    *,
+    seed: int = 1,
+    quality: int = 92,
+) -> Path:
+    """A 'scanned' PDF: each A4 page is one noisy RGB photo (hard to compress), JPEG-encoded."""
+    import io
+    import random
+
+    from reportlab.lib.utils import ImageReader
+
+    rng = random.Random(seed)
+    c = canvas.Canvas(str(path), pagesize=A4)
+    for n in range(1, pages + 1):
+        noise = bytes(rng.getrandbits(8) for _ in range(pixels[0] * pixels[1] * 3 // 16))
+        img = Image.frombytes("RGB", (pixels[0] // 4, pixels[1] // 4), noise).resize(pixels)
+        buffer = io.BytesIO()
+        img.save(buffer, "JPEG", quality=quality)
+        buffer.seek(0)
+        c.drawImage(ImageReader(buffer), 36, 72, width=A4[0] - 72, height=A4[1] - 144)
+        c.setFont("Helvetica", 14)
+        c.drawString(36, 40, page_label(path.stem, n))
+        c.showPage()
+    c.save()
+    return path

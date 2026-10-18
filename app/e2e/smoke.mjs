@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { chromium } from "playwright-core";
 
 /** Tools that are no longer "Coming soon" (update as Phase 1 lands). */
-const AVAILABLE = ["merge", "rotate", "remove-pages", "extract-pages"];
+const AVAILABLE = ["merge", "rotate", "remove-pages", "extract-pages", "split"];
 const TOTAL_TOOLS = 31;
 
 const args = process.argv.slice(2);
@@ -293,6 +293,41 @@ if (section("extract")) {
     /mixed_extract( \(\d+\))?$/.test(recents[0]?.path ?? ""),
     "recent outputs remember the folder",
   );
+}
+
+if (section("split")) {
+  console.log("Split");
+  await go("#/tool/split");
+  await addFiles("mixed.pdf");
+  await waitForTiles(5);
+  const ranges = page.getByLabel("Ranges", { exact: true });
+  await ranges.fill("1-3, 9");
+  expect(
+    (await ranges.getAttribute("aria-invalid")) === "true",
+    "invalid range highlighted live (A2)",
+  );
+  await page.locator("#opt-ranges-error").getByText("Page 9 doesn't exist").waitFor();
+  expect(
+    await page.getByRole("button", { name: "Split PDF", exact: true }).isDisabled(),
+    "invalid ranges block Run",
+  );
+  await ranges.fill("1-3, 5");
+  expect((await ranges.getAttribute("aria-invalid")) === null, "valid ranges clear the error");
+  expect((await tile(2).innerText()).includes("File 1"), "page 2 badged File 1");
+  expect((await tile(5).innerText()).includes("File 2"), "page 5 badged File 2");
+  await shot("split-ready");
+  const text = await runAndWait("Split PDF");
+  expect(text.includes("Split into 2 files"), "split by ranges → 2 files");
+  expect(/2 files in “mixed_split( \(\d+\))?”/.test(text), "delivered in a mixed_split folder");
+  await startOver();
+  await addFiles("mixed.pdf");
+  await waitForTiles(5);
+  await page.getByLabel("Split", { exact: true }).click();
+  await page.getByRole("option", { name: "Every N pages" }).click();
+  await page.getByLabel("Pages per file").fill("2");
+  expect((await tile(5).innerText()).includes("File 3"), "every 2 pages: page 5 → File 3");
+  const text2 = await runAndWait("Split PDF");
+  expect(text2.includes("Split into 3 files"), "every 2 pages → 3 files");
 }
 
 if (!only || only.has("echo") || echoOnly) {

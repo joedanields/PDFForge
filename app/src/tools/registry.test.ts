@@ -24,7 +24,7 @@ const FEATURE_REFS = [
 const product = TOOLS.filter((t) => !t.devOnly);
 
 /** Tools with a working engine method, in registry order (grows through Phase 1). */
-const IMPLEMENTED = ["merge", "remove-pages", "extract-pages", "rotate"];
+const IMPLEMENTED = ["merge", "split", "remove-pages", "extract-pages", "rotate"];
 
 describe("tool registry contents", () => {
   it("covers every tool of sections A–F exactly once", () => {
@@ -166,5 +166,30 @@ describe("search", () => {
   it("returns everything for an empty query and nothing for nonsense", () => {
     expect(searchTools("  ", visible)).toHaveLength(visible.length);
     expect(searchTools("zzzz-not-a-tool", visible)).toEqual([]);
+  });
+});
+
+describe("split page badges", () => {
+  const badge = getTool("split")?.pageBadge;
+  const at = (options: Record<string, unknown>, index: number) =>
+    badge?.(options, index, 8) ?? null;
+
+  it("shows which file each page goes to", () => {
+    const ranges = { mode: "ranges", ranges: "1-3, 5, 2" };
+    expect([0, 1, 3, 4].map((i) => at(ranges, i))).toEqual([
+      "File 1",
+      "Files 1, 3",
+      null,
+      "File 2",
+    ]);
+    expect(at({ ...ranges, merge_ranges: true }, 0)).toBe("Included");
+    expect(at({ mode: "fixed", every: 3 }, 6)).toBe("File 3");
+    expect(at({ mode: "all" }, 4)).toBe("File 5");
+  });
+
+  it("shows nothing when the result depends on the file", () => {
+    expect(at({ mode: "size" }, 0)).toBeNull();
+    expect(at({ mode: "bookmarks" }, 0)).toBeNull();
+    expect(at({ mode: "ranges", ranges: "1-99" }, 0)).toBeNull();
   });
 });

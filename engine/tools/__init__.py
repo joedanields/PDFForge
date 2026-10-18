@@ -13,4 +13,5 @@ TOOLS: Mapping[str, ToolFn] = {
     "merge": organize.merge,
     "remove-pages": organize.remove_pages,
     "rotate": organize.rotate,
+    "split": organize.split,
 }

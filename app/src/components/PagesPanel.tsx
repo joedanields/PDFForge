@@ -55,7 +55,11 @@ export function PagesPanel({ tool, file, options, onOptionsChange, onRemove, dis
   }, [file.path, file.password]);
 
   const pageCount = source?.numPages ?? file.pages ?? 0;
-  const binding = tool.pageSelection;
+  const rule = tool.pageSelection?.activeWhen;
+  const binding =
+    tool.pageSelection && (!rule || rule.values.includes(String(options[rule.key])))
+      ? tool.pageSelection
+      : undefined;
   const field = describeOptions(tool.optionsSchema).find((f) => f.key === binding?.option);
   const emptyMeansAll = field?.meta.pages?.emptyMeansAll ?? false;
   const text =
@@ -89,6 +93,7 @@ export function PagesPanel({ tool, file, options, onOptionsChange, onRemove, dis
             source,
             pageIndex: i,
             label: String(i + 1),
+            badge: tool.pageBadge?.(options, i, source.numPages) ?? null,
             rotation:
               tool.previewRotation?.(options, {
                 index: i,

@@ -43,6 +43,8 @@ export interface GridItem {
   /** Extra clockwise rotation to preview, in degrees. */
   rotation?: number;
   label: string;
+  /** Small label in the tile corner (e.g. "File 2"). */
+  badge?: string | null;
   /** Size of a blank page (portrait A4 if omitted). */
   blankSize?: PageSize;
 }
@@ -405,6 +407,11 @@ function TileBody({
     >
       <PageImage item={item} width={width} dimmed={remove} />
       <span className="text-xs font-medium text-text-muted">{item.label}</span>
+      {item.badge && (
+        <span className="absolute bottom-8 left-3 rounded-full bg-surface/95 px-2 py-0.5 text-xs font-medium text-text shadow">
+          {item.badge}
+        </span>
+      )}
       {selected && (
         <span
           className={cn(

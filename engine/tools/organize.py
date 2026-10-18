@@ -6,26 +6,31 @@ re-rendered. Rotation only changes /Rotate.
 
 from __future__ import annotations
 
+import io
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pikepdf import OutlineItem, Pdf
+import pikepdf
+from pikepdf import Dictionary, Name, ObjectStreamMode, OutlineItem, Pdf
 
 from jobs import JobContext, ToolResult
 from protocol import EngineError, ErrorCode
 from utils.atomic import commit
 from utils.images import image_to_pdf_bytes
 from utils.naming import resolve_output, sanitize_stem
-from utils.pagecopy import PageCopier, copy_document_info, write_outline
+from utils.pagecopy import PageCopier, copy_document_info, dest_lookup, write_outline
 from utils.pageinfo import is_landscape, rotation, set_rotation
 from utils.pdfio import deliver_many, deliver_pdf, open_pdf, save_pdf, single_pdf_input
-from utils.ranges import parse_page_set
+from utils.ranges import parse_page_set, parse_ranges
 from utils.validation import (
     check_pdf,
     check_readable_file,
     is_image,
     option_bool,
     option_choice,
+    option_float,
+    option_int,
     option_str,
     optional_str,
     options_dict,
@@ -251,3 +256,163 @@ def extract_pages(params: dict[str, Any], ctx: JobContext) -> ToolResult:
         outputs,
         {"pages": len(selected), "files": len(files) or 1, **extra, "protected_inputs": protected},
     )
+
+
+# ── A2 Split ────────────────────────────────────────────────────────────────────────────────
+
+SPLIT_MODES = ("ranges", "fixed", "all", "size", "bookmarks")
+
+
+@dataclass
+class _Chunk:
+    pages: list[int]  # 0-based, in output order
+    name: str  # file name part after the document stem
+
+
+def split(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Split by ranges, every N pages, one file per page, file size or top-level bookmarks."""
+    source = single_pdf_input(params)
+    options = options_dict(params)
+    mode = option_choice(options, "mode", SPLIT_MODES, "ranges")
+    stem = sanitize_stem(source.stem)
+
+    with open_pdf(source, passwords_map(params)) as src:
+        total = len(src.pages)
+        protected = int(src.is_encrypted)
+        version = src.pdf_version
+        oversized = 0
+        if mode == "ranges":
+            text = option_str(options, "ranges", "", max_len=5000)
+            if not text.strip():
+                raise EngineError(ErrorCode.INVALID_INPUT, "Enter the page ranges to split out")
+            ranges = parse_ranges(text, total)
+            if option_bool(options, "merge_ranges", False):
+                pages = [p - 1 for r in ranges for p in r.pages()]
+                out = _rebuild(src, pages)
+                try:
+                    tmp = ctx.temp_dir / "split.pdf"
+                    save_pdf(out, tmp, ctx, start=20, min_version=version)
+                finally:
+                    out.close()
+                final = deliver_pdf(tmp, params, source, "split", protected=[source])
+                stats = {"pages": len(pages), "files": 1, "ranges": len(ranges)}
+                return ToolResult([final], {**stats, "protected_inputs": protected})
+            chunks = [_Chunk([p - 1 for p in r.pages()], r.label()) for r in ranges]
+        elif mode == "fixed":
+            every = option_int(options, "every", 1, lo=1, hi=100_000)
+            chunks = [
+                _Chunk(list(range(a, min(a + every, total))), f"{a + 1}-{min(a + every, total)}")
+                for a in range(0, total, every)
+            ]
+        elif mode == "all":
+            chunks = [_Chunk([i], f"page-{i + 1}") for i in range(total)]
+        elif mode == "bookmarks":
+            chunks = _bookmark_chunks(src)
+        else:
+            max_mb = option_float(options, "max_mb", 5.0, lo=0.05, hi=100_000)
+            chunks, oversized = _size_chunks(src, int(max_mb * 1024 * 1024), ctx)
+
+        files: list[Path] = []
+        for n, chunk in enumerate(chunks):
+            ctx.check_cancelled()
+            ctx.progress(30 + n * 65 / len(chunks), f"Writing file {n + 1} of {len(chunks)}")
+            out = _rebuild(src, chunk.pages)
+            try:
+                path = ctx.temp_dir / f"{stem}_{sanitize_stem(chunk.name)}.pdf"
+                if path in files:  # e.g. the same range typed twice
+                    path = path.with_name(f"{path.stem} ({n + 1}).pdf")
+                out.save(path, min_version=version, object_stream_mode=ObjectStreamMode.generate)
+            finally:
+                out.close()
+            files.append(path)
+
+    outputs, extra = deliver_many(files, params, source, "split", ctx, protected=[source])
+    result: dict[str, Any] = {"pages": total, "files": len(files), **extra}
+    result["protected_inputs"] = protected
+    if oversized:
+        result["oversized_pages"] = oversized
+    return ToolResult(outputs, result)
+
+
+def _bookmark_chunks(src: Pdf) -> list[_Chunk]:
+    """One file per top-level bookmark; pages before the first bookmark join the first file."""
+    try:
+        items = list(src.open_outline().root)
+    except pikepdf.OutlineStructureError:
+        items = []
+    lookup = dest_lookup(src)
+    index_of = {page.obj.objgen: n for n, page in enumerate(src.pages)}
+    starts: list[tuple[int, str]] = []
+    for item in items:
+        dest: Any = item.destination
+        action = item.action
+        if dest is None and isinstance(action, Dictionary) and action.get("/S") == Name.GoTo:
+            dest = action.get("/D")
+        resolved = lookup(dest) if dest is not None else None
+        if resolved is None:
+            continue
+        target = resolved[0]
+        page = index_of.get(target.objgen) if isinstance(target, Dictionary) else None
+        if page is not None and all(page != s for s, _ in starts):
+            starts.append((page, item.title))
+    if not starts:
+        raise EngineError(ErrorCode.INVALID_INPUT, "This PDF has no bookmarks to split by")
+    starts.sort()
+    total = len(src.pages)
+    chunks: list[_Chunk] = []
+    for n, (start, title) in enumerate(starts):
+        first = 0 if n == 0 else start
+        end = starts[n + 1][0] if n + 1 < len(starts) else total
+        chunks.append(_Chunk(list(range(first, end)), f"{n + 1:02d} {title}"))
+    return chunks
+
+
+def _saved_size(src: Pdf, pages: list[int]) -> int:
+    out = _rebuild(src, pages)
+    try:
+        buffer = io.BytesIO()
+        out.save(buffer, object_stream_mode=ObjectStreamMode.generate)
+        return buffer.tell()
+    finally:
+        out.close()
+
+
+def _size_chunks(src: Pdf, limit: int, ctx: JobContext) -> tuple[list[_Chunk], int]:
+    """Greedy chunks of at most ``limit`` bytes.
+
+    Each page is measured on its own; a chunk's real size is at most the sum of its pages'
+    sizes (shared fonts and images are stored once), so the grouping does not overshoot. Saved
+    chunks are still checked, and a page that alone exceeds the limit gets its own file
+    (reported as oversized).
+    """
+    total = len(src.pages)
+    sizes: list[int] = []
+    for i in range(total):
+        ctx.check_cancelled()
+        if i % 20 == 0:
+            ctx.progress(i * 25 / total, f"Measuring page {i + 1} of {total}")
+        sizes.append(_saved_size(src, [i]))
+
+    groups: list[list[int]] = []
+    current: list[int] = []
+    current_size = 0
+    for i, size in enumerate(sizes):
+        if current and current_size + size > limit:
+            groups.append(current)
+            current, current_size = [], 0
+        current.append(i)
+        current_size += size
+    if current:
+        groups.append(current)
+
+    verified: list[list[int]] = []
+    pending = groups
+    while pending:
+        group = pending.pop(0)
+        if len(group) > 1 and _saved_size(src, group) > limit:
+            half = len(group) // 2
+            pending[:0] = [group[:half], group[half:]]
+        else:
+            verified.append(group)
+    oversized = sum(1 for g in verified if len(g) == 1 and sizes[g[0]] > limit)
+    return [_Chunk(g, f"part-{n + 1}") for n, g in enumerate(verified)], oversized
