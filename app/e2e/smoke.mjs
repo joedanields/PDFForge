@@ -20,6 +20,7 @@ const AVAILABLE = [
   "split",
   "organize",
   "image-to-pdf",
+  "pdf-to-image",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -424,6 +425,27 @@ if (section("images")) {
   await page.getByRole("radio", { name: "One PDF per image" }).click();
   const text2 = await runAndWait("Convert to PDF");
   expect(text2.includes("2 images → 2 PDFs"), "one PDF per image");
+}
+
+if (section("toimage")) {
+  console.log("PDF to Image");
+  await go("#/tool/pdf-to-image");
+  await addFiles("mixed.pdf");
+  await waitForTiles(5);
+  await tile(2).click();
+  await tile(3).click({ modifiers: ["Shift"] });
+  await page.getByRole("radio", { name: "PNG" }).click();
+  await page.getByRole("radio", { name: "72 dpi" }).click();
+  const text = await runAndWait("Convert to images");
+  expect(text.includes("2 pages → PNG at 72 dpi"), "2 selected pages rendered as PNG");
+  expect(/2 files in “mixed_images( \(\d+\))?”/.test(text), "images delivered in a new folder");
+  await startOver();
+  await addFiles("scan.pdf");
+  await waitForTiles(2);
+  await page.getByRole("radio", { name: "Extract pictures" }).click();
+  expect(!(await page.getByText("Resolution").isVisible()), "render options hidden for extraction");
+  const text2 = await runAndWait("Convert to images");
+  expect(text2.includes("Extracted 2 images"), "embedded pictures extracted");
 }
 
 if (!only || only.has("echo") || echoOnly) {

@@ -307,6 +307,47 @@ export const imageToPdfOptions = z.object({
   ),
 });
 
+export const pdfToImageOptions = z.object({
+  mode: opt.choice(
+    "Convert",
+    [
+      { value: "pages", label: "Pages to images" },
+      { value: "extract", label: "Extract pictures" },
+    ],
+    "pages",
+    undefined,
+    { segmented: true },
+  ),
+  format: opt.choice(
+    "Format",
+    [
+      { value: "jpg", label: "JPG" },
+      { value: "png", label: "PNG" },
+    ],
+    "jpg",
+    "JPG is smaller; PNG keeps text perfectly sharp.",
+    { segmented: true, showWhen: { key: "mode", values: ["pages"] } },
+  ),
+  dpi: opt.choice(
+    "Resolution",
+    [
+      { value: "72", label: "72 dpi" },
+      { value: "150", label: "150 dpi" },
+      { value: "300", label: "300 dpi" },
+    ],
+    "150",
+    "72 for screens, 150 for most uses, 300 for printing.",
+    { segmented: true, showWhen: { key: "mode", values: ["pages"] } },
+  ),
+  pages: opt.pages(
+    "Pages",
+    "Select pages in the grid or type ranges. Leave empty for every page.",
+    true,
+    { showWhen: { key: "mode", values: ["pages"] } },
+  ),
+  zip: opt.bool("Put the images in a .zip", false, "Otherwise they go into a new folder."),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -622,18 +663,42 @@ export const TOOLS: readonly ToolDef[] = [
   }),
 
   // ── D. Convert from PDF ───────────────────────────────────────────────────────────────────
-  soon({
+  {
     id: "pdf-to-image",
     ref: "D1",
     name: "PDF to Image",
     description: "Export pages as JPG or PNG, or pull out the embedded pictures.",
     category: "convert",
     icon: Images,
-    accepts: manyPdfs,
+    accepts: onePdf,
+    optionsSchema: pdfToImageOptions,
+    status: "available",
     priority: "must",
     phase: 1,
-    keywords: ["pdf to jpg", "png", "export images"],
-  }),
+    engineMethod: "pdf-to-image",
+    actionLabel: "Convert to images",
+    keywords: ["pdf to jpg", "png", "export images", "screenshot", "pictures"],
+    layout: "pages",
+    pageSelection: { option: "pages", activeWhen: { key: "mode", values: ["pages"] } },
+    toEngine: (o) =>
+      o.mode === "extract"
+        ? { mode: "extract", zip: o.zip }
+        : {
+            mode: "pages",
+            format: o.format,
+            dpi: Number(o.dpi),
+            pages: typeof o.pages === "string" && o.pages.trim() ? o.pages : "all",
+            zip: o.zip,
+          },
+    summary: (s) => {
+      if (typeof s.images === "number") {
+        return `Extracted ${s.images} ${s.images === 1 ? "image" : "images"}`;
+      }
+      if (typeof s.pages !== "number") return null;
+      const fmt = typeof s.format === "string" ? s.format.toUpperCase() : "image";
+      return `${s.pages} ${s.pages === 1 ? "page" : "pages"} → ${fmt} at ${String(s.dpi)} dpi`;
+    },
+  },
   soon({
     id: "pdf-to-word",
     ref: "D2",

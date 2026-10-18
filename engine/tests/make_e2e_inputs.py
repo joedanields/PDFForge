@@ -16,6 +16,7 @@ from tests.fixtures import (
     make_exif_rotated_jpeg,
     make_heic,
     make_image,
+    make_image_pdf,
     make_text_pdf,
 )
 
@@ -33,6 +34,7 @@ def main(out: Path) -> None:
     make_text_pdf(out / "mixed.pdf", 5, page_sizes=[A4, landscape(A4)])
     make_exif_rotated_jpeg(out / "photo.jpg", (800, 400))  # displays portrait
     make_heic(out / "phone.heic")
+    make_image_pdf(out / "scan.pdf", 2, (400, 500))
     print(f"e2e inputs written to {out}")
 
 
