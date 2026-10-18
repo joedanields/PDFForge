@@ -20,6 +20,8 @@ interface Props {
   result: DoneEvent;
   /** Tool-specific one-liner (ToolDef.summary). */
   summary?: string | null;
+  /** Several inputs combined into one output (changes the protection warning wording). */
+  combined?: boolean;
   onStartOver: () => void;
 }
 
@@ -30,7 +32,7 @@ function num(value: unknown): number | null {
 }
 
 /** Result screen: Open / Show in folder / Start over (docs/04 §2.4), plus tool-specific notes. */
-export function ResultCard({ result, summary = null, onStartOver }: Props) {
+export function ResultCard({ result, summary = null, combined = false, onStartOver }: Props) {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const { stats, outputs } = result;
@@ -128,7 +130,9 @@ export function ResultCard({ result, summary = null, onStartOver }: Props) {
           className="mt-4 flex w-full items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-left text-sm"
         >
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
-          <span className="flex-1">{t("result.protectedWarning")}</span>
+          <span className="flex-1">
+            {t(combined ? "result.protectedWarning" : "result.protectedWarningSingle")}
+          </span>
           {protectAvailable && first && (
             <Button
               size="sm"

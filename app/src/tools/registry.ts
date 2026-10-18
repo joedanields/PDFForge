@@ -163,6 +163,14 @@ export const rotateOptions = z.object({
   ),
 });
 
+export const removeOptions = z.object({
+  pages: opt.pages(
+    "Pages to remove",
+    "Click pages in the grid or type ranges like 2, 5-7. Removed pages are deleted from the file, not just hidden.",
+    false,
+  ),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -204,7 +212,7 @@ export const TOOLS: readonly ToolDef[] = [
     phase: 1,
     keywords: ["separate", "ranges", "divide"],
   }),
-  soon({
+  {
     id: "remove-pages",
     ref: "A3",
     name: "Remove Pages",
@@ -212,10 +220,24 @@ export const TOOLS: readonly ToolDef[] = [
     category: "organize",
     icon: FileMinus,
     accepts: onePdf,
+    optionsSchema: removeOptions,
+    status: "available",
     priority: "must",
     phase: 1,
-    keywords: ["delete"],
-  }),
+    engineMethod: "remove-pages",
+    actionLabel: "Remove pages",
+    keywords: ["delete", "drop", "cut"],
+    layout: "pages",
+    pageSelection: { option: "pages", tone: "remove" },
+    check: (_options, { pageCount, selectedCount }) =>
+      pageCount !== null && selectedCount >= pageCount
+        ? "You can't remove every page — keep at least one."
+        : null,
+    summary: (s) =>
+      typeof s.removed === "number" && typeof s.pages === "number"
+        ? `Removed ${s.removed} ${s.removed === 1 ? "page" : "pages"} · ${s.pages} left`
+        : null,
+  },
   soon({
     id: "extract-pages",
     ref: "A4",

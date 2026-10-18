@@ -75,6 +75,8 @@ export const en = {
     "This file is already well optimized — compressing it would not make it smaller, so the original ({size}) was kept and no new file was created.",
   "result.protectedWarning":
     "Some files were password-protected. The merged file has no protection.",
+  "result.protectedWarningSingle":
+    "The original file was password-protected. The new file has no protection.",
   "result.protect": "Protect this file",
   "settings.title": "Settings",
   "settings.general": "General",

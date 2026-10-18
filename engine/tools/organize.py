@@ -16,7 +16,7 @@ from protocol import EngineError, ErrorCode
 from utils.atomic import commit
 from utils.images import image_to_pdf_bytes
 from utils.naming import resolve_output
-from utils.pagecopy import PageCopier, write_outline
+from utils.pagecopy import PageCopier, copy_document_info, write_outline
 from utils.pageinfo import is_landscape, rotation, set_rotation
 from utils.pdfio import deliver_pdf, open_pdf, save_pdf, single_pdf_input
 from utils.ranges import parse_page_set
@@ -148,4 +148,56 @@ def rotate(params: dict[str, Any], ctx: JobContext) -> ToolResult:
     final = deliver_pdf(tmp, params, source, "rotate", protected=[source])
     return ToolResult(
         [final], {"pages": page_count, "rotated": len(selected), "bytes": final.stat().st_size}
+    )
+
+
+# ── A3 Remove pages ─────────────────────────────────────────────────────────────────────────
+
+
+def _rebuild(src: Pdf, keep: list[int]) -> Pdf:
+    """New document with only ``keep`` (0-based, in order) — bookmarks and links re-pointed,
+    those aimed at dropped pages removed, so dropped pages are truly gone from the file."""
+    out = Pdf.new()
+    copier = PageCopier(out)
+    copier.add(src, keep)
+    copier.finish()
+    write_outline(out, copier.outline_items(src))
+    copy_document_info(src, out)
+    return out
+
+
+def remove_pages(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    source = single_pdf_input(params)
+    pages_text = option_str(options_dict(params), "pages", "", max_len=2000)
+    if not pages_text.strip():
+        raise EngineError(ErrorCode.INVALID_INPUT, "Select the pages to remove")
+    tmp = ctx.temp_dir / "removed.pdf"
+
+    with open_pdf(source, passwords_map(params)) as src:
+        total = len(src.pages)
+        remove = set(parse_page_set(pages_text, total))
+        keep = [i for i in range(total) if i not in remove]
+        if not keep:
+            raise EngineError(
+                ErrorCode.INVALID_INPUT, "You can't remove every page — keep at least one"
+            )
+        ctx.progress(10, f"Removing {len(remove)} pages")
+        ctx.check_cancelled()
+        out = _rebuild(src, keep)
+        try:
+            save_pdf(out, tmp, ctx, start=40, min_version=src.pdf_version)
+        finally:
+            out.close()
+        protected = int(src.is_encrypted)
+
+    ctx.check_cancelled()
+    final = deliver_pdf(tmp, params, source, "remove", protected=[source])
+    return ToolResult(
+        [final],
+        {
+            "pages": len(keep),
+            "removed": len(remove),
+            "bytes": final.stat().st_size,
+            "protected_inputs": protected,
+        },
     )

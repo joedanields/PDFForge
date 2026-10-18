@@ -388,6 +388,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
         <ResultCard
           result={phase.result}
           summary={tool.summary?.(phase.result.stats) ?? null}
+          combined={tool.accepts.max > 1 && files.length > 1}
           onStartOver={startOver}
         />
       </PageShell>

@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { chromium } from "playwright-core";
 
 /** Tools that are no longer "Coming soon" (update as Phase 1 lands). */
-const AVAILABLE = ["merge", "rotate"];
+const AVAILABLE = ["merge", "rotate", "remove-pages"];
 const TOTAL_TOOLS = 31;
 
 const args = process.argv.slice(2);
@@ -220,6 +220,40 @@ if (section("rotate")) {
   expect(
     text2.includes("Rotated 2 of 5 pages"),
     "orientation filter: only the 2 landscape pages rotate",
+  );
+}
+
+if (section("remove")) {
+  console.log("Remove pages");
+  await go("#/tool/remove-pages");
+  await addFiles("mixed.pdf");
+  await waitForTiles(5);
+  const run = page.getByRole("button", { name: "Remove pages", exact: true });
+  expect(await run.isDisabled(), "Run disabled until pages are selected");
+  await page.getByRole("button", { name: "Select all", exact: true }).click();
+  await page.getByText("You can't remove every page — keep at least one.").waitFor();
+  expect(await run.isDisabled(), "removing every page is blocked with a message (A3)");
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  await tile(2).click();
+  await tile(4).click({ modifiers: ["Control"] });
+  expect(
+    (await tile(2).getAttribute("class")).includes("ring-danger"),
+    "pages to remove are marked in red",
+  );
+  await shot("remove-ready");
+  const text = await runAndWait("Remove pages");
+  expect(text.includes("Removed 2 pages · 3 left"), "result: Removed 2 pages · 3 left");
+  expect(/mixed_remove( \(\d+\))?\.pdf/.test(text), "output named mixed_remove.pdf");
+  await startOver();
+  await addFiles("secret.pdf");
+  await page.getByLabel("Password: secret.pdf").fill("pw123");
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await waitForTiles(2);
+  await tile(1).click();
+  const text2 = await runAndWait("Remove pages");
+  expect(
+    text2.includes("The original file was password-protected. The new file has no protection."),
+    "protected input: result warns the new file is unprotected",
   );
 }
 

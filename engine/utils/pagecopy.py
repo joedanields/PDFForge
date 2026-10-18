@@ -209,7 +209,10 @@ class PageCopier:
 def copy_document_info(src: Pdf, out: Pdf) -> None:
     """Carry title/author/... and XMP metadata over to a rebuilt document."""
     for key, value in src.docinfo.items():
-        out.docinfo[key] = value
+        out.docinfo[key] = out.copy_foreign(value) if value.is_indirect else value
+    lang = src.Root.get("/Lang")
+    if lang is not None:
+        out.Root.Lang = lang
     metadata = src.Root.get("/Metadata")
     if metadata is not None:
         out.Root.Metadata = out.copy_foreign(metadata)
