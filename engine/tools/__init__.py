@@ -22,6 +22,7 @@ TOOLS: Mapping[str, ToolFn] = {
     "echo": debug.echo,
     "excel-to-pdf": office.excel_to_pdf,
     "extract-pages": organize.extract_pages,
+    "html-to-pdf": to_pdf.html_to_pdf,
     "image-to-pdf": to_pdf.image_to_pdf,
     "merge": organize.merge,
     "organize": organize.organize,

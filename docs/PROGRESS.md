@@ -5,7 +5,7 @@
 ## Now
 
 - **Current phase:** Phase 2 — Conversions
-- **Working on:** 2.5 HTML → PDF
+- **Working on:** 2.6 PDF → PDF/A
 
 ## Phase 2 — Conversions
 
@@ -15,8 +15,8 @@
 | 2.1 Word / PowerPoint / Excel → PDF (C2–C4) | done | test_office (17), smoke `office` | d38f7c3 | LibreOffice headless; 50-page DOCX well under 15 s; D-016, D-017 |
 | 2.2 PDF → Word / Excel / PowerPoint / Text (D2–D4, D6) | done | test_pdf_to_word (10), test_pdf_to_office (11), smoke `frompdf` | eb20478 | own converter on pdfplumber (no pdf2docx); OCR mode for scans; D-018–D-020 |
 | 2.3 Text / Markdown → PDF (C6) | done | test_text_to_pdf (9), smoke `text` | f34a8eb | ReportLab; D-021 |
-| 2.4 Repair (B2) | done | test_repair (9), smoke `repair` | (this commit) | qpdf + pypdf fallback; D-022 |
-| 2.5 HTML → PDF (C5) | todo | | | |
+| 2.4 Repair (B2) | done | test_repair (9), smoke `repair` | 9162f9f | qpdf + pypdf fallback; D-022 |
+| 2.5 HTML → PDF (C5) | done | test_html_to_pdf (6), smoke `html` | (this commit) | LibreOffice on a self-contained, script-free copy; local files only; D-023 |
 | 2.6 PDF → PDF/A (D5) — best effort, no Ghostscript | todo | | | |
 | 2.7 OCR (B3) + OCR languages in Settings | todo | | | |
 | 2.8 Notices, Phase 2 installer + release smoke | todo | | | |

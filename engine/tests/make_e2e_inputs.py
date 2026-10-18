@@ -50,6 +50,13 @@ def main(out: Path) -> None:
     (out / "notes.md").write_text(
         "# Meeting notes\n\n- **Budget** approved\n- Next review in *May*\n", encoding="utf-8"
     )
+    (out / "site").mkdir(exist_ok=True)
+    make_image(out / "site" / "logo.png", (240, 120), "RGB", (30, 90, 160))
+    (out / "site" / "index.html").write_text(
+        "<!doctype html><html><head><title>Site</title></head><body><h1>Offline page</h1>"
+        '<img src="logo.png"><img src="https://example.com/remote.png"></body></html>',
+        encoding="utf-8",
+    )
     broken = make_text_pdf(out / "damaged.pdf", 3).read_bytes()
     (out / "damaged.pdf").write_bytes(re.sub(rb"startxref\s+\d+", b"startxref\n999999", broken))
     print(f"e2e inputs written to {out}")

@@ -35,6 +35,7 @@ const AVAILABLE = [
   "pdf-to-text",
   "text-to-pdf",
   "repair",
+  "html-to-pdf",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -683,6 +684,17 @@ if (section("repair")) {
   const text = await runAndWait("Repair PDF");
   expect(text.includes("Repaired — all 3 pages recovered"), "broken xref repaired");
   expect(/damaged_repaired( \(\d+\))?\.pdf/.test(text), "output damaged_repaired.pdf");
+}
+
+if (section("html")) {
+  console.log("HTML to PDF");
+  await go("#/tool/html-to-pdf");
+  await addFiles("site/index.html");
+  await page.waitForFunction(() => document.querySelectorAll("main ol li").length === 1);
+  await page.getByRole("radio", { name: "Landscape" }).click();
+  const text = await runAndWait("Convert to PDF");
+  expect(/index( \(\d+\))?\.pdf/.test(text), "page → index.pdf");
+  expect(text.includes("1 online resources left out"), "online picture left out and reported");
 }
 
 if (!only || only.has("echo") || echoOnly) {

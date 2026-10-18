@@ -645,6 +645,47 @@ export const textToPdfOptions = z.object({
   ),
 });
 
+export const htmlToPdfOptions = z.object({
+  page_size: opt.choice(
+    "Page size",
+    [
+      { value: "a4", label: "A4" },
+      { value: "letter", label: "Letter" },
+      { value: "legal", label: "Legal" },
+    ],
+    "a4",
+    undefined,
+    { segmented: true },
+  ),
+  orientation: opt.choice(
+    "Orientation",
+    [
+      { value: "portrait", label: "Portrait" },
+      { value: "landscape", label: "Landscape" },
+    ],
+    "portrait",
+    undefined,
+    { segmented: true },
+  ),
+  margins: opt.choice(
+    "Margins",
+    [
+      { value: "none", label: "None" },
+      { value: "small", label: "Small" },
+      { value: "normal", label: "Normal" },
+      { value: "large", label: "Large" },
+    ],
+    "normal",
+    undefined,
+    { segmented: true },
+  ),
+  background: opt.bool(
+    "Include background colours and images",
+    true,
+    "Scripts never run and nothing is downloaded: online pictures are left out.",
+  ),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -1003,7 +1044,7 @@ export const TOOLS: readonly ToolDef[] = [
       return typeof s.files === "number" && s.files > 1 ? `${s.files} PDFs, ${pages}` : pages;
     },
   },
-  soon({
+  {
     id: "html-to-pdf",
     ref: "C5",
     name: "HTML to PDF",
@@ -1011,10 +1052,25 @@ export const TOOLS: readonly ToolDef[] = [
     category: "convert",
     icon: Code,
     accepts: { extensions: ["html", "htm"], min: 1, max: 1, label: "One HTML file" },
+    optionsSchema: htmlToPdfOptions,
+    status: "available",
     priority: "should",
     phase: 2,
-    keywords: ["web page"],
-  }),
+    engineMethod: "html-to-pdf",
+    actionLabel: "Convert to PDF",
+    keywords: ["web page", "htm", "website", "save page"],
+    summary: (s) => {
+      if (typeof s.pages !== "number") return null;
+      const parts = [`${s.pages} ${s.pages === 1 ? "page" : "pages"}`];
+      if (typeof s.remote_skipped === "number") {
+        parts.push(`${s.remote_skipped} online resources left out (works offline)`);
+      }
+      if (typeof s.missing_files === "number") {
+        parts.push(`${s.missing_files} linked files not found`);
+      }
+      return parts.join(" · ");
+    },
+  },
   {
     id: "text-to-pdf",
     ref: "C6",

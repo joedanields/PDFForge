@@ -1,4 +1,7 @@
-"""Convert to PDF (docs/02_FEATURES.md §C): Image → PDF (C1), Text/Markdown → PDF (C6)."""
+"""Convert to PDF (docs/02_FEATURES.md §C).
+
+Image → PDF (C1), HTML → PDF (C5) and Text/Markdown → PDF (C6); Office → PDF is tools/office.py.
+"""
 
 from __future__ import annotations
 
@@ -12,6 +15,7 @@ from reportlab.platypus import SimpleDocTemplate, Spacer
 
 from jobs import JobContext, ToolResult
 from protocol import EngineError, ErrorCode
+from utils import html_prep, libreoffice
 from utils.images import image_to_pdf_bytes
 from utils.naming import sanitize_stem
 from utils.pagecopy import PageCopier
@@ -20,6 +24,7 @@ from utils.textlayout import FAMILIES, Counter, Styles, markdown_flowables, plai
 from utils.validation import (
     IMAGE_SUFFIXES,
     check_readable_file,
+    option_bool,
     option_choice,
     option_float,
     options_dict,
@@ -187,4 +192,64 @@ def text_to_pdf(params: dict[str, Any], ctx: JobContext) -> ToolResult:
     stats: dict[str, Any] = {"files": len(outputs), "pages": pages}
     if replaced:
         stats["replaced_characters"] = replaced
+    return ToolResult(outputs, stats)
+
+
+# ── HTML → PDF (C5) ───────────────────────────────────────────────────────────────────────
+
+HTML_SUFFIXES = (".html", ".htm")
+
+
+def html_to_pdf(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Local HTML files → PDF via the bundled LibreOffice (no scripts run, nothing is fetched
+    from the internet; local pictures and style sheets are included)."""
+    inputs = [Path(p) for p in require_str_list(params, "inputs", min_len=1, max_len=100)]
+    for path in inputs:
+        if path.suffix.lower() not in HTML_SUFFIXES:
+            raise EngineError(
+                ErrorCode.INVALID_INPUT, f"{path.name} is not an HTML file", str(path)
+            )
+        check_readable_file(path)
+        if path.stat().st_size > TEXT_MAX_BYTES:
+            raise EngineError(ErrorCode.UNSUPPORTED, f"{path.name} is larger than 20 MB", str(path))
+    options = options_dict(params)
+    page_size = option_choice(options, "page_size", tuple(html_prep.PAGE_SIZES), "a4")
+    orientation = option_choice(options, "orientation", ("portrait", "landscape"), "portrait")
+    margins = option_choice(options, "margins", tuple(html_prep.MARGINS), "normal")
+    background = option_bool(options, "background", True)
+    outputs: list[Path] = []
+    pages = 0
+    remote = 0
+    missing = 0
+    for n, source in enumerate(inputs):
+        ctx.check_cancelled()
+        ctx.progress(n * 95 / len(inputs), f"Converting {source.name}")
+        prepared = html_prep.prepare(
+            source,
+            page_size=page_size,
+            orientation=orientation,
+            margins=margins,
+            background=background,
+        )
+        remote += prepared.remote_skipped
+        missing += prepared.missing
+        work = ctx.temp_dir / f"html_{n:03d}"
+        work.mkdir(parents=True)
+        copy = work / "input.html"
+        copy.write_bytes(prepared.html)
+        produced = libreoffice.convert(
+            copy, work, ctx, filter_name="writer_web_pdf_Export", shown=source
+        )
+        with Pdf.open(produced) as pdf:
+            pages += len(pdf.pages)
+        tmp = work / "result" / f"{sanitize_stem(source.stem)}.pdf"
+        tmp.parent.mkdir()
+        produced.replace(tmp)
+        outputs.append(deliver_converted(tmp, params, source, protected=inputs))
+    ctx.progress(100, "Done")
+    stats: dict[str, Any] = {"files": len(outputs), "pages": pages}
+    if remote:
+        stats["remote_skipped"] = remote
+    if missing:
+        stats["missing_files"] = missing
     return ToolResult(outputs, stats)
