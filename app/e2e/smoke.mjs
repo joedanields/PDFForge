@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { chromium } from "playwright-core";
 
 /** Tools that are no longer "Coming soon" (update as Phase 1 lands). */
-const AVAILABLE = ["merge", "rotate", "remove-pages", "extract-pages", "split"];
+const AVAILABLE = ["merge", "rotate", "remove-pages", "extract-pages", "split", "organize"];
 const TOTAL_TOOLS = 31;
 
 const args = process.argv.slice(2);
@@ -328,6 +328,68 @@ if (section("split")) {
   expect((await tile(5).innerText()).includes("File 3"), "every 2 pages: page 5 → File 3");
   const text2 = await runAndWait("Split PDF");
   expect(text2.includes("Split into 3 files"), "every 2 pages → 3 files");
+}
+
+if (section("organize")) {
+  console.log("Organize");
+  await go("#/tool/organize");
+  await addFiles("Chapter 1.pdf");
+  await waitForTiles(3);
+  const labels = () =>
+    page
+      .locator('[role="option"][data-tile]')
+      .evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
+  const button = (name) => page.getByRole("toolbar").getByRole("button", { name, exact: true });
+  await tile(1).click();
+  await button("Rotate right").click();
+  await page.waitForFunction(() =>
+    document.querySelector('[aria-label="Page 1"] img')?.style.transform.includes("rotate(90deg)"),
+  );
+  ok("rotate right previews on the page");
+  await tile(3).click();
+  await button("Duplicate").click();
+  await waitForTiles(4);
+  ok("duplicate adds a copy");
+  await tile(2).click();
+  await button("Delete").click();
+  await waitForTiles(3);
+  await page.keyboard.press("Control+z");
+  await waitForTiles(4);
+  await page.keyboard.press("Control+y");
+  await waitForTiles(3);
+  ok("delete, Ctrl+Z, Ctrl+Y");
+  await button("Blank page").click();
+  await waitForTiles(4);
+  ok("blank page inserted");
+  await tile(1).click();
+  await addFiles("Chapter 2.pdf");
+  await waitForTiles(6);
+  const order = await labels();
+  expect(
+    order.join(",") === "Page A1,Page B1,Page B2,Page A3,Page A3,Page Blank",
+    `second PDF inserted after the selected page (${order.join(", ")})`,
+  );
+  // Drag the blank page to the front.
+  const from = await page.getByRole("option", { name: "Page Blank" }).boundingBox();
+  const to = await page.getByRole("option", { name: "Page A1" }).boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2 - 20, from.y + from.height / 2, { steps: 4 });
+  await page.mouse.move(to.x + 10, to.y + to.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[role="option"][data-tile]')?.getAttribute("aria-label") ===
+      "Page Blank",
+  );
+  ok("drag-to-reorder moves the blank page first");
+  await page.getByRole("option", { name: "Page B2" }).hover();
+  await page.getByRole("button", { name: "Move page B2 right" }).click();
+  expect((await labels()).indexOf("Page B2") === 4, "per-page move button (keyboard accessible)");
+  await shot("organize-ready");
+  const text = await runAndWait("Save PDF");
+  expect(text.includes("6 pages from 2 files"), "saved: 6 pages from 2 files");
+  expect(/Chapter 1_organize( \(\d+\))?\.pdf/.test(text), "output named Chapter 1_organize.pdf");
 }
 
 if (!only || only.has("echo") || echoOnly) {

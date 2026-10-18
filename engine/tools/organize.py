@@ -416,3 +416,129 @@ def _size_chunks(src: Pdf, limit: int, ctx: JobContext) -> tuple[list[_Chunk], i
             verified.append(group)
     oversized = sum(1 for g in verified if len(g) == 1 and sizes[g[0]] > limit)
     return [_Chunk(g, f"part-{n + 1}") for n, g in enumerate(verified)], oversized
+
+
+# ── A5 Organize ─────────────────────────────────────────────────────────────────────────────
+
+ORGANIZE_MAX_INPUTS = 50
+ORGANIZE_MAX_PAGES = 20_000
+_MAX_BLANK_SIDE = 14_400.0  # PDF user-unit limit, in points
+
+
+@dataclass
+class _PlanEntry:
+    source: int | None  # input index, None for a blank page
+    page: int  # 0-based page in that input
+    rotate: int  # extra clockwise rotation
+    size: tuple[float, float] = (595.28, 841.89)  # blank page size (A4)
+
+
+def _organize_plan(options: dict[str, Any], inputs: int) -> list[_PlanEntry]:
+    raw = options.get("pages")
+    if not isinstance(raw, list) or not raw:
+        raise EngineError(ErrorCode.INVALID_INPUT, "Add at least one page")
+    if len(raw) > ORGANIZE_MAX_PAGES:
+        raise EngineError(ErrorCode.INVALID_INPUT, f"At most {ORGANIZE_MAX_PAGES} pages")
+    plan: list[_PlanEntry] = []
+    for n, item in enumerate(raw):
+        if not isinstance(item, dict):
+            raise EngineError(ErrorCode.INVALID_INPUT, f"Page entry {n + 1} is not valid")
+        rotate = item.get("rotate", 0)
+        if rotate not in (0, 90, 180, 270) or isinstance(rotate, bool):
+            raise EngineError(ErrorCode.INVALID_INPUT, f"Page entry {n + 1}: bad rotation")
+        if item.get("blank") is True:
+            width, height = item.get("width", 595.28), item.get("height", 841.89)
+            if not all(
+                isinstance(v, int | float) and not isinstance(v, bool) and 1 <= v <= _MAX_BLANK_SIDE
+                for v in (width, height)
+            ):
+                raise EngineError(ErrorCode.INVALID_INPUT, f"Page entry {n + 1}: bad page size")
+            plan.append(_PlanEntry(None, 0, rotate, (float(width), float(height))))
+            continue
+        src, page = item.get("src"), item.get("page")
+        if (
+            not isinstance(src, int)
+            or isinstance(src, bool)
+            or not 0 <= src < inputs
+            or not isinstance(page, int)
+            or isinstance(page, bool)
+            or page < 0
+        ):
+            raise EngineError(ErrorCode.INVALID_INPUT, f"Page entry {n + 1} is not valid")
+        plan.append(_PlanEntry(src, page, rotate))
+    return plan
+
+
+def organize(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Assemble a new PDF from pages of 1+ PDFs in any order, with per-page rotation, duplicates
+    and blank pages. Lossless; bookmarks and links follow each page's first copy."""
+    inputs = [
+        Path(p) for p in require_str_list(params, "inputs", min_len=1, max_len=ORGANIZE_MAX_INPUTS)
+    ]
+    for path in inputs:
+        check_pdf(path)
+    plan = _organize_plan(options_dict(params), len(inputs))
+    passwords = passwords_map(params)
+    tmp = ctx.temp_dir / "organized.pdf"
+
+    sources: list[Pdf] = []
+    out = Pdf.new()
+    try:
+        for path in inputs:
+            ctx.check_cancelled()
+            sources.append(open_pdf(path, passwords))
+        for entry in plan:
+            if entry.source is not None and entry.page >= len(sources[entry.source].pages):
+                raise EngineError(
+                    ErrorCode.INVALID_INPUT,
+                    f"{inputs[entry.source].name} has no page {entry.page + 1}",
+                    str(inputs[entry.source]),
+                )
+
+        copier = PageCopier(out)
+        # Consecutive pages of the same input are copied in one batch (much faster).
+        n = 0
+        while n < len(plan):
+            ctx.check_cancelled()
+            entry = plan[n]
+            if entry.source is None:
+                index = copier.add_blank(*entry.size)
+                copier.rotate(index, entry.rotate)
+                n += 1
+                continue
+            run_end = n
+            while run_end + 1 < len(plan) and plan[run_end + 1].source == entry.source:
+                run_end += 1
+            batch = plan[n : run_end + 1]
+            placed = copier.add(sources[entry.source], [e.page for e in batch])
+            for out_index, e in zip(placed, batch, strict=True):
+                copier.rotate(out_index, e.rotate)
+            ctx.progress(n * 80 / len(plan), f"Arranging page {n + 1} of {len(plan)}")
+            n = run_end + 1
+
+        copier.finish()
+        items: list[OutlineItem] = []
+        for pdf in sources:
+            items.extend(copier.outline_items(pdf))
+        write_outline(out, items)
+        copy_document_info(sources[0], out)
+        version = max((pdf.pdf_version for pdf in sources), default="1.4")
+        save_pdf(out, tmp, ctx, start=85, min_version=version)
+        protected = sum(int(pdf.is_encrypted) for pdf in sources)
+    finally:
+        out.close()
+        for pdf in sources:
+            pdf.close()
+
+    ctx.check_cancelled()
+    final = deliver_pdf(tmp, params, inputs[0], "organize", protected=inputs)
+    return ToolResult(
+        [final],
+        {
+            "pages": len(plan),
+            "files": len(inputs),
+            "blank_pages": sum(1 for e in plan if e.source is None),
+            "bytes": final.stat().st_size,
+            "protected_inputs": protected,
+        },
+    )

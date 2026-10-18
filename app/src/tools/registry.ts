@@ -379,18 +379,29 @@ export const TOOLS: readonly ToolDef[] = [
         : `Extracted ${pages}`;
     },
   },
-  soon({
+  {
     id: "organize",
     ref: "A5",
     name: "Organize PDF",
     description: "Reorder, rotate, duplicate, insert or delete pages on a thumbnail board.",
     category: "organize",
     icon: LayoutGrid,
-    accepts: manyPdfs,
+    accepts: { extensions: PDF, min: 1, max: 50, label: "PDF files — add more any time" },
+    optionsSchema: NO_OPTIONS,
+    status: "available",
     priority: "must",
     phase: 1,
-    keywords: ["reorder", "sort", "arrange"],
-  }),
+    engineMethod: "organize",
+    actionLabel: "Save PDF",
+    keywords: ["reorder", "sort", "arrange", "move pages", "duplicate", "blank page"],
+    layout: "organize",
+    summary: (s) =>
+      typeof s.pages === "number"
+        ? `${s.pages} ${s.pages === 1 ? "page" : "pages"}${
+            typeof s.files === "number" && s.files > 1 ? ` from ${s.files} files` : ""
+          }`
+        : null,
+  },
   {
     id: "rotate",
     ref: "A6",

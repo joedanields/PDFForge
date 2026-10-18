@@ -11,6 +11,7 @@ TOOLS: Mapping[str, ToolFn] = {
     "echo": debug.echo,
     "extract-pages": organize.extract_pages,
     "merge": organize.merge,
+    "organize": organize.organize,
     "remove-pages": organize.remove_pages,
     "rotate": organize.rotate,
     "split": organize.split,

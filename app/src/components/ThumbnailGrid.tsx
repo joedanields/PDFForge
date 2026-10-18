@@ -384,6 +384,8 @@ function TileBody({
   const remove = tone === "remove" && selected;
   return (
     <div
+      // dnd-kit's attributes come first: the tile keeps its listbox role and roving tabIndex.
+      {...dragProps}
       ref={setRef}
       data-tile
       role="option"
@@ -393,7 +395,6 @@ function TileBody({
       onClick={onClick}
       onFocus={onFocus}
       style={dragStyle}
-      {...dragProps}
       className={cn(
         "group relative flex cursor-pointer flex-col items-center gap-2 rounded-card p-2 outline-none transition-colors",
         "focus-visible:ring-2 focus-visible:ring-ring",

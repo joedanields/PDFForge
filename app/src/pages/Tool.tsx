@@ -6,6 +6,7 @@ import { DropZone } from "@/components/DropZone";
 import { FileList } from "@/components/FileList";
 import { OptionsForm } from "@/components/OptionsForm";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
+import { OrganizeBoard, type OrganizePlan } from "@/components/OrganizeBoard";
 import { PagesPanel } from "@/components/PagesPanel";
 import { ProgressOverlay } from "@/components/ProgressOverlay";
 import { ResultCard } from "@/components/ResultCard";
@@ -121,6 +122,8 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   }, [files]);
   const needsFiles = tool.accepts.max > 0;
   const pageTool = tool.layout === "pages";
+  const organizeTool = tool.layout === "organize";
+  const [organizePlan, setOrganizePlan] = useState<OrganizePlan | null>(null);
   const editing = phase.kind === "edit";
 
   const patchFile = useCallback((key: string, patch: Partial<InputFile>) => {
@@ -286,6 +289,9 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
       blocker = tool.check(parsed.data, { pageCount, selectedCount });
     }
   }
+  if (!blocker && organizeTool && files.length > 0 && !organizePlan?.pages.length) {
+    blocker = t("organize.empty");
+  }
   const loading = files.some((f) => f.status === "loading");
   const canRun = editing && parsed.success && !blocker && !loading;
 
@@ -318,21 +324,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     });
   };
 
-  const run = async () => {
-    if (!canRun || !tool.engineMethod) return;
-    setNotice(null);
-    const passwords = Object.fromEntries(
-      files.filter((f) => f.password).map((f) => [f.path, f.password ?? ""]),
-    );
-    const { options: plain, secrets } = splitSecrets(tool.optionsSchema, parsed.data);
-    const engineOptions = tool.toEngine ? tool.toEngine(plain) : plain;
-    const params: Record<string, unknown> = {
-      options: engineOptions,
-      ...(Object.keys(secrets).length > 0 && { secrets }), // never stored in history
-      ...(needsFiles && { inputs: files.map((f) => f.path), passwords }),
-      ...(!needsFiles && engineOptions),
-      ...(outputDir && { output_dir: outputDir }),
-    };
+  const execute = async (method: string, params: Record<string, unknown>) => {
     setPhase({
       kind: "running",
       percent: 0,
@@ -341,7 +333,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
       cancelling: false,
     });
     try {
-      const job = await runJob(tool.engineMethod, params, (p) => {
+      const job = await runJob(method, params, (p) => {
         setPhase((prev) =>
           prev.kind === "running" ? { ...prev, percent: p.percent, message: p.message } : prev,
         );
@@ -355,6 +347,34 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     } finally {
       jobRef.current = null;
     }
+  };
+
+  const run = async () => {
+    if (!canRun || !tool.engineMethod) return;
+    setNotice(null);
+    const passwords = Object.fromEntries(
+      files.filter((f) => f.password).map((f) => [f.path, f.password ?? ""]),
+    );
+    if (organizeTool) {
+      if (!organizePlan) return;
+      const used = new Set(organizePlan.inputs);
+      await execute(tool.engineMethod, {
+        inputs: organizePlan.inputs,
+        options: { pages: organizePlan.pages },
+        passwords: Object.fromEntries(Object.entries(passwords).filter(([p]) => used.has(p))),
+        ...(outputDir && { output_dir: outputDir }),
+      });
+      return;
+    }
+    const { options: plain, secrets } = splitSecrets(tool.optionsSchema, parsed.data);
+    const engineOptions = tool.toEngine ? tool.toEngine(plain) : plain;
+    await execute(tool.engineMethod, {
+      options: engineOptions,
+      ...(Object.keys(secrets).length > 0 && { secrets }), // never stored in history
+      ...(needsFiles && { inputs: files.map((f) => f.path), passwords }),
+      ...(!needsFiles && engineOptions),
+      ...(outputDir && { output_dir: outputDir }),
+    });
   };
 
   const cancel = () => {
@@ -444,29 +464,41 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
               disabled={!editing}
             />
           )}
-          {needsFiles && files.length > 0 && !(pageTool && files[0]?.status === "ready") && (
-            <>
-              <FileList
-                files={files}
-                onReorder={setFiles}
-                onRemove={removeFile}
-                onPassword={(key, pw) => {
-                  const file = files.find((f) => f.key === key);
-                  if (file) void loadPreview(file, pw);
-                }}
-                onSortByName={() => setFiles(sortByName)}
-                onSortByDate={() => setFiles(sortByDate)}
-              />
-              {files.length < tool.accepts.max && !pageTool && (
-                <DropZone
-                  compact
-                  over={over}
-                  acceptedLabel={tool.accepts.label}
-                  onSelect={() => void selectFiles()}
-                />
-              )}
-            </>
+          {organizeTool && files.some((f) => f.status === "ready") && (
+            <OrganizeBoard
+              files={files}
+              disabled={!editing}
+              onPlanChange={setOrganizePlan}
+              onAddFiles={() => void selectFiles()}
+              onRemoveFile={removeFile}
+            />
           )}
+          {needsFiles &&
+            files.length > 0 &&
+            !(pageTool && files[0]?.status === "ready") &&
+            !(organizeTool && files.every((f) => f.status === "ready")) && (
+              <>
+                <FileList
+                  files={files}
+                  onReorder={setFiles}
+                  onRemove={removeFile}
+                  onPassword={(key, pw) => {
+                    const file = files.find((f) => f.key === key);
+                    if (file) void loadPreview(file, pw);
+                  }}
+                  onSortByName={() => setFiles(sortByName)}
+                  onSortByDate={() => setFiles(sortByDate)}
+                />
+                {files.length < tool.accepts.max && !pageTool && !organizeTool && (
+                  <DropZone
+                    compact
+                    over={over}
+                    acceptedLabel={tool.accepts.label}
+                    onSelect={() => void selectFiles()}
+                  />
+                )}
+              </>
+            )}
           {!needsFiles && (
             <div className="rounded-card border bg-surface-2/50 p-8 text-text-muted">
               {tool.description}
