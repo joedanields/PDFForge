@@ -23,6 +23,7 @@ a = Analysis(
         "tools.optimize",
         "tools.organize",
         "tools.pdf_office",
+        "tools.pdfa",
         "tools.security",
         "tools.to_pdf",
     ],

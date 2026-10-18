@@ -5,7 +5,7 @@
 ## Now
 
 - **Current phase:** Phase 2 — Conversions
-- **Working on:** 2.6 PDF → PDF/A
+- **Working on:** 2.7 OCR
 
 ## Phase 2 — Conversions
 
@@ -16,8 +16,8 @@
 | 2.2 PDF → Word / Excel / PowerPoint / Text (D2–D4, D6) | done | test_pdf_to_word (10), test_pdf_to_office (11), smoke `frompdf` | eb20478 | own converter on pdfplumber (no pdf2docx); OCR mode for scans; D-018–D-020 |
 | 2.3 Text / Markdown → PDF (C6) | done | test_text_to_pdf (9), smoke `text` | f34a8eb | ReportLab; D-021 |
 | 2.4 Repair (B2) | done | test_repair (9), smoke `repair` | 9162f9f | qpdf + pypdf fallback; D-022 |
-| 2.5 HTML → PDF (C5) | done | test_html_to_pdf (6), smoke `html` | (this commit) | LibreOffice on a self-contained, script-free copy; local files only; D-023 |
-| 2.6 PDF → PDF/A (D5) — best effort, no Ghostscript | todo | | | |
+| 2.5 HTML → PDF (C5) | done | test_html_to_pdf (6), smoke `html` | 8723d7b | LibreOffice on a self-contained, script-free copy; local files only; D-023 |
+| 2.6 PDF → PDF/A (D5) | done | test_pdfa (7, veraPDF-validated on the dev machine), smoke `pdfa` | (this commit) | PDF/A-2b/3b with pikepdf, no Ghostscript; CMYK / unembeddable fonts refused; D-024. Also: lazy tool loading cuts ~2.4 s off every job (D-025) |
 | 2.7 OCR (B3) + OCR languages in Settings | todo | | | |
 | 2.8 Notices, Phase 2 installer + release smoke | todo | | | |
 
@@ -47,3 +47,6 @@
   `vendor/_tools/7zip` (only used to unpack the Tesseract installer). Python packages added to
   the engine: python-docx, python-pptx, openpyxl (+ stub packages lxml-stubs, types-openpyxl
   for type checking).
+- Development-only validator (not shipped, git-ignored): Eclipse Temurin JRE 21.0.12 (zip,
+  SHA-256 checked against Adoptium) in `vendor/_tools/jre` and veraPDF 1.30.3 (headless
+  installer) in `vendor/_tools/verapdf`. Tests use them when present to validate PDF/A output.

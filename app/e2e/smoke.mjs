@@ -36,6 +36,7 @@ const AVAILABLE = [
   "text-to-pdf",
   "repair",
   "html-to-pdf",
+  "pdf-to-pdfa",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -695,6 +696,16 @@ if (section("html")) {
   const text = await runAndWait("Convert to PDF");
   expect(/index( \(\d+\))?\.pdf/.test(text), "page → index.pdf");
   expect(text.includes("1 online resources left out"), "online picture left out and reported");
+}
+
+if (section("pdfa")) {
+  console.log("PDF to PDF/A");
+  await go("#/tool/pdf-to-pdfa");
+  await addFiles("annual.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
+  const text = await runAndWait("Convert to PDF/A");
+  expect(text.includes("PDF/A-2b · checked by PDFForge"), "converted to PDF/A-2b");
+  expect(/annual_pdfa( \(\d+\))?\.pdf/.test(text), "output annual_pdfa.pdf");
 }
 
 if (!only || only.has("echo") || echoOnly) {

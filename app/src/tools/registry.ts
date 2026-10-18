@@ -686,6 +686,18 @@ export const htmlToPdfOptions = z.object({
   ),
 });
 
+export const pdfToPdfaOptions = z.object({
+  level: opt.choice(
+    "Conformance level",
+    [
+      { value: "2b", label: "PDF/A-2b — recommended" },
+      { value: "3b", label: "PDF/A-3b — keeps attached files" },
+    ],
+    "2b",
+    "Files that cannot be archived faithfully (e.g. print colours) are refused, never mislabelled.",
+  ),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -1213,18 +1225,30 @@ export const TOOLS: readonly ToolDef[] = [
         : `No ruled tables found — text exported in columns (${sheets})`;
     },
   },
-  soon({
+  {
     id: "pdf-to-pdfa",
     ref: "D5",
     name: "PDF to PDF/A",
     description: "Convert to PDF/A for long-term archiving.",
     category: "convert",
     icon: FileArchive,
-    accepts: manyPdfs,
+    accepts: convertPdfs,
+    optionsSchema: pdfToPdfaOptions,
+    status: "available",
     priority: "should",
     phase: 2,
-    keywords: ["archive", "pdfa"],
-  }),
+    engineMethod: "pdf-to-pdfa",
+    actionLabel: "Convert to PDF/A",
+    keywords: ["archive", "pdfa", "long-term", "iso 19005"],
+    summary: (s) => {
+      if (typeof s.level !== "string") return null;
+      const fixes =
+        s.fixes && typeof s.fixes === "object"
+          ? Object.values(s.fixes as Record<string, number>).reduce((a, b) => a + b, 0)
+          : 0;
+      return `PDF/A-${s.level} · checked by PDFForge${fixes ? ` · ${fixes} fixes applied` : ""}`;
+    },
+  },
   {
     id: "pdf-to-text",
     ref: "D6",
