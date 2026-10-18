@@ -171,6 +171,27 @@ export const removeOptions = z.object({
   ),
 });
 
+export const extractOptions = z.object({
+  pages: opt.pages(
+    "Pages to extract",
+    "Click pages in the grid or type ranges like 1-3, 8.",
+    false,
+  ),
+  mode: opt.choice(
+    "Save as",
+    [
+      { value: "single", label: "One PDF" },
+      { value: "separate", label: "One PDF per page" },
+    ],
+    "single",
+    undefined,
+    { segmented: true },
+  ),
+  zip: opt.bool("Put the files in a .zip", false, "Otherwise they go into a new folder.", {
+    showWhen: { key: "mode", values: ["separate"] },
+  }),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -238,7 +259,7 @@ export const TOOLS: readonly ToolDef[] = [
         ? `Removed ${s.removed} ${s.removed === 1 ? "page" : "pages"} · ${s.pages} left`
         : null,
   },
-  soon({
+  {
     id: "extract-pages",
     ref: "A4",
     name: "Extract Pages",
@@ -246,9 +267,23 @@ export const TOOLS: readonly ToolDef[] = [
     category: "organize",
     icon: FileOutput,
     accepts: onePdf,
+    optionsSchema: extractOptions,
+    status: "available",
     priority: "must",
     phase: 1,
-  }),
+    engineMethod: "extract-pages",
+    actionLabel: "Extract pages",
+    keywords: ["select", "copy pages", "save pages"],
+    layout: "pages",
+    pageSelection: { option: "pages" },
+    summary: (s) => {
+      if (typeof s.pages !== "number") return null;
+      const pages = `${s.pages} ${s.pages === 1 ? "page" : "pages"}`;
+      return typeof s.files === "number" && s.files > 1
+        ? `Extracted ${pages} into ${s.files} files`
+        : `Extracted ${pages}`;
+    },
+  },
   soon({
     id: "organize",
     ref: "A5",

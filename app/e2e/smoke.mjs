@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { chromium } from "playwright-core";
 
 /** Tools that are no longer "Coming soon" (update as Phase 1 lands). */
-const AVAILABLE = ["merge", "rotate", "remove-pages"];
+const AVAILABLE = ["merge", "rotate", "remove-pages", "extract-pages"];
 const TOTAL_TOOLS = 31;
 
 const args = process.argv.slice(2);
@@ -254,6 +254,44 @@ if (section("remove")) {
   expect(
     text2.includes("The original file was password-protected. The new file has no protection."),
     "protected input: result warns the new file is unprotected",
+  );
+}
+
+if (section("extract")) {
+  console.log("Extract pages");
+  await go("#/tool/extract-pages");
+  await addFiles("mixed.pdf");
+  await waitForTiles(5);
+  await page.getByLabel("Pages to extract").fill("1-3");
+  expect(
+    !(await page.getByText("Put the files in a .zip").isVisible()),
+    "zip option hidden for 'One PDF'",
+  );
+  const single = await runAndWait("Extract pages");
+  expect(single.includes("Extracted 3 pages"), "one PDF with 3 pages");
+  expect(/mixed_extract( \(\d+\))?\.pdf/.test(single), "output named mixed_extract.pdf");
+  await startOver();
+  await addFiles("mixed.pdf");
+  await waitForTiles(5);
+  await tile(1).click();
+  await tile(5).click({ modifiers: ["Control"] });
+  await page.getByRole("radio", { name: "One PDF per page" }).click();
+  await page.getByText("Put the files in a .zip").waitFor();
+  ok("zip option appears for 'One PDF per page'");
+  const separate = await runAndWait("Extract pages");
+  expect(separate.includes("Extracted 2 pages into 2 files"), "two single-page PDFs");
+  expect(/2 files in “mixed_extract( \(\d+\))?”/.test(separate), "files delivered in a new folder");
+  expect(
+    await page.getByRole("button", { name: "Open folder" }).isVisible(),
+    "result offers Open folder",
+  );
+  await shot("extract-result");
+  const recents = await page.evaluate(() =>
+    window.__TAURI_INTERNALS__.invoke("list_recents", { limit: 1 }),
+  );
+  expect(
+    /mixed_extract( \(\d+\))?$/.test(recents[0]?.path ?? ""),
+    "recent outputs remember the folder",
   );
 }
 

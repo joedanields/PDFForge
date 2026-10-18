@@ -15,10 +15,10 @@ from jobs import JobContext, ToolResult
 from protocol import EngineError, ErrorCode
 from utils.atomic import commit
 from utils.images import image_to_pdf_bytes
-from utils.naming import resolve_output
+from utils.naming import resolve_output, sanitize_stem
 from utils.pagecopy import PageCopier, copy_document_info, write_outline
 from utils.pageinfo import is_landscape, rotation, set_rotation
-from utils.pdfio import deliver_pdf, open_pdf, save_pdf, single_pdf_input
+from utils.pdfio import deliver_many, deliver_pdf, open_pdf, save_pdf, single_pdf_input
 from utils.ranges import parse_page_set
 from utils.validation import (
     check_pdf,
@@ -200,4 +200,54 @@ def remove_pages(params: dict[str, Any], ctx: JobContext) -> ToolResult:
             "bytes": final.stat().st_size,
             "protected_inputs": protected,
         },
+    )
+
+
+# ── A4 Extract pages ────────────────────────────────────────────────────────────────────────
+
+
+def extract_pages(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Selected pages → one new PDF, or one PDF per page (in a new folder, optionally zipped)."""
+    source = single_pdf_input(params)
+    options = options_dict(params)
+    pages_text = option_str(options, "pages", "", max_len=2000)
+    if not pages_text.strip():
+        raise EngineError(ErrorCode.INVALID_INPUT, "Select the pages to extract")
+    mode = option_choice(options, "mode", ("single", "separate"), "single")
+    stem = sanitize_stem(source.stem)
+
+    with open_pdf(source, passwords_map(params)) as src:
+        selected = parse_page_set(pages_text, len(src.pages))
+        protected = int(src.is_encrypted)
+        version = src.pdf_version
+        files: list[Path] = []
+        if mode == "single":
+            ctx.progress(10, f"Extracting {len(selected)} pages")
+            out = _rebuild(src, selected)
+            try:
+                tmp = ctx.temp_dir / "extracted.pdf"
+                save_pdf(out, tmp, ctx, start=40, min_version=version)
+            finally:
+                out.close()
+        else:
+            for n, index in enumerate(selected):
+                ctx.check_cancelled()
+                ctx.progress(n * 95 / len(selected), f"Page {index + 1}")
+                out = _rebuild(src, [index])
+                try:
+                    path = ctx.temp_dir / f"{stem}_page-{index + 1}.pdf"
+                    out.save(path, min_version=version)
+                finally:
+                    out.close()
+                files.append(path)
+
+    ctx.check_cancelled()
+    if mode == "single":
+        final = deliver_pdf(tmp, params, source, "extract", protected=[source])
+        outputs, extra = [final], {"bytes": final.stat().st_size}
+    else:
+        outputs, extra = deliver_many(files, params, source, "extract", ctx, protected=[source])
+    return ToolResult(
+        outputs,
+        {"pages": len(selected), "files": len(files) or 1, **extra, "protected_inputs": protected},
     )

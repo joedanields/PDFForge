@@ -24,7 +24,7 @@ const FEATURE_REFS = [
 const product = TOOLS.filter((t) => !t.devOnly);
 
 /** Tools with a working engine method, in registry order (grows through Phase 1). */
-const IMPLEMENTED = ["merge", "remove-pages", "rotate"];
+const IMPLEMENTED = ["merge", "remove-pages", "extract-pages", "rotate"];
 
 describe("tool registry contents", () => {
   it("covers every tool of sections A–F exactly once", () => {
