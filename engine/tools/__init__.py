@@ -18,4 +18,5 @@ TOOLS: Mapping[str, ToolFn] = {
     "remove-pages": organize.remove_pages,
     "rotate": organize.rotate,
     "split": organize.split,
+    "unlock": security.unlock,
 }

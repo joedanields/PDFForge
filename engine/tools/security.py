@@ -96,3 +96,44 @@ def protect(params: dict[str, Any], ctx: JobContext) -> ToolResult:
             "bytes": final.stat().st_size,
         },
     )
+
+
+def unlock(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Remove the open password (the correct one must be supplied — no guessing, docs/05 S9)
+    and/or owner restrictions from a PDF."""
+    source = single_pdf_input(params)
+    passwords = passwords_map(params)
+    tmp = ctx.temp_dir / "unlocked.pdf"
+    with open_pdf(source, passwords) as pdf:
+        if not pdf.is_encrypted:
+            raise EngineError(
+                ErrorCode.INVALID_INPUT,
+                f"{source.name} has no password or restrictions to remove",
+                str(source),
+            )
+        had_open_password = bool(pdf.encryption.user_password)
+        allow = pdf.allow
+        had_restrictions = not all(
+            (
+                allow.extract,
+                allow.modify_annotation,
+                allow.modify_form,
+                allow.modify_other,
+                allow.modify_assembly,
+                allow.print_highres,
+            )
+        )
+        ctx.progress(20, "Removing protection")
+        save_pdf(pdf, tmp, ctx, start=30, message="Removing protection", encryption=False)
+        pages = len(pdf.pages)
+    ctx.check_cancelled()
+    final = deliver_pdf(tmp, params, source, "unlock", protected=[source])
+    return ToolResult(
+        [final],
+        {
+            "pages": pages,
+            "removed_open_password": had_open_password,
+            "removed_restrictions": had_restrictions,
+            "bytes": final.stat().st_size,
+        },
+    )

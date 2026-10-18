@@ -34,6 +34,7 @@ const IMPLEMENTED = [
   "image-to-pdf",
   "pdf-to-image",
   "protect",
+  "unlock",
 ];
 
 describe("tool registry contents", () => {

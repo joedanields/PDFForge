@@ -22,6 +22,7 @@ const AVAILABLE = [
   "image-to-pdf",
   "pdf-to-image",
   "protect",
+  "unlock",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -485,6 +486,27 @@ if (section("protect")) {
     window.__TAURI_INTERNALS__.invoke("list_recents", { limit: 1 }),
   );
   expect(history[0]?.tool === "protect", "recorded in recent outputs");
+}
+
+if (section("unlock")) {
+  console.log("Unlock");
+  await go("#/tool/unlock");
+  await addFiles("secret.pdf");
+  await page.getByText("Password protected").waitFor();
+  const run = page.getByRole("button", { name: "Unlock PDF", exact: true });
+  expect(await run.isDisabled(), "Run disabled until the password is entered");
+  await page.getByLabel("Password: secret.pdf").fill("pw123");
+  await page.getByRole("button", { name: "Unlock", exact: true }).click();
+  await page.waitForFunction(() => !document.body.innerText.includes("Password protected"));
+  const text = await runAndWait("Unlock PDF");
+  expect(/Password (and restrictions )?removed/.test(text), "result: password removed");
+  expect(/secret_unlock( \(\d+\))?\.pdf/.test(text), "output named secret_unlock.pdf");
+  await startOver();
+  await addFiles("mixed.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
+  await page.getByRole("button", { name: "Unlock PDF", exact: true }).click();
+  await page.getByText("mixed.pdf has no password or restrictions to remove").waitFor();
+  ok("unprotected file: explained inline on the file card");
 }
 
 if (!only || only.has("echo") || echoOnly) {

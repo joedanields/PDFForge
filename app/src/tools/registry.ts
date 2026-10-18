@@ -899,18 +899,33 @@ export const TOOLS: readonly ToolDef[] = [
         : `Permissions restricted (${method})`;
     },
   },
-  soon({
+  {
     id: "unlock",
     ref: "F2",
     name: "Unlock PDF",
     description: "Remove a password you know, or lift owner restrictions.",
     category: "security",
     icon: LockOpen,
-    accepts: manyPdfs,
+    accepts: {
+      extensions: PDF,
+      min: 1,
+      max: 1,
+      label: "One protected PDF — you'll need its password if it asks for one to open",
+    },
+    optionsSchema: NO_OPTIONS,
+    status: "available",
     priority: "must",
     phase: 1,
-    keywords: ["decrypt", "remove password"],
-  }),
+    engineMethod: "unlock",
+    actionLabel: "Unlock PDF",
+    keywords: ["decrypt", "remove password", "unprotect", "restrictions"],
+    summary: (s) =>
+      s.removed_open_password === true
+        ? s.removed_restrictions === true
+          ? "Password and restrictions removed"
+          : "Password removed"
+        : "Restrictions removed",
+  },
   soon({
     id: "sign",
     ref: "F3",
