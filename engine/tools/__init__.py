@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from jobs import ToolFn
-from tools import debug, from_pdf, organize, security, to_pdf
+from tools import debug, edit, from_pdf, organize, security, to_pdf
 
 TOOLS: Mapping[str, ToolFn] = {
     "echo": debug.echo,
@@ -13,6 +13,7 @@ TOOLS: Mapping[str, ToolFn] = {
     "image-to-pdf": to_pdf.image_to_pdf,
     "merge": organize.merge,
     "organize": organize.organize,
+    "page-numbers": edit.page_numbers,
     "pdf-to-image": from_pdf.pdf_to_image,
     "protect": security.protect,
     "remove-pages": organize.remove_pages,

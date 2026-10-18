@@ -23,6 +23,7 @@ const AVAILABLE = [
   "pdf-to-image",
   "protect",
   "unlock",
+  "page-numbers",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -507,6 +508,29 @@ if (section("unlock")) {
   await page.getByRole("button", { name: "Unlock PDF", exact: true }).click();
   await page.getByText("mixed.pdf has no password or restrictions to remove").waitFor();
   ok("unprotected file: explained inline on the file card");
+}
+
+if (section("numbers")) {
+  console.log("Page numbers");
+  await go("#/tool/page-numbers");
+  await addFiles("mixed.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
+  await page.getByRole("radio", { name: "Bottom right" }).click();
+  await page.getByLabel("Format", { exact: true }).click();
+  await page.getByRole("option", { name: "Custom…" }).click();
+  await page.getByLabel("Custom format").fill("Page {n} / {total}");
+  await page.getByLabel("Pages to number").fill("2-9");
+  await page.locator("#opt-pages-error").waitFor();
+  expect(
+    await page.getByRole("button", { name: "Add page numbers" }).isDisabled(),
+    "invalid page range blocks Run",
+  );
+  await page.getByLabel("Pages to number").fill("2-5");
+  await page.getByLabel("Color").fill("#1a73e8");
+  await shot("numbers-ready");
+  const text = await runAndWait("Add page numbers");
+  expect(text.includes("Numbered 4 pages (1–4)"), "result: Numbered 4 pages (1–4)");
+  expect(/mixed_numbered( \(\d+\))?\.pdf/.test(text), "output named mixed_numbered.pdf");
 }
 
 if (!only || only.has("echo") || echoOnly) {

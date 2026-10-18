@@ -392,6 +392,72 @@ export const protectOptions = z.object({
   ),
 });
 
+export const POSITIONS = [
+  { value: "top-left", label: "Top left" },
+  { value: "top-center", label: "Top center" },
+  { value: "top-right", label: "Top right" },
+  { value: "middle-left", label: "Middle left" },
+  { value: "middle-center", label: "Center" },
+  { value: "middle-right", label: "Middle right" },
+  { value: "bottom-left", label: "Bottom left" },
+  { value: "bottom-center", label: "Bottom center" },
+  { value: "bottom-right", label: "Bottom right" },
+] as const;
+
+const MARGIN_POINTS: Record<string, number> = { small: 18, medium: 28, large: 48 };
+
+const FONT_CHOICES = [
+  { value: "helvetica", label: "Sans (Helvetica)" },
+  { value: "times", label: "Serif (Times)" },
+  { value: "courier", label: "Monospace (Courier)" },
+] as const;
+
+export const pageNumberOptions = z.object({
+  position: opt.choice("Position", POSITIONS, "bottom-center", undefined, { grid: true }),
+  format: opt.choice(
+    "Format",
+    [
+      { value: "n", label: "1" },
+      { value: "page_n", label: "Page 1" },
+      { value: "n_of_total", label: "1 of 10" },
+      { value: "page_n_of_total", label: "Page 1 of 10" },
+      { value: "custom", label: "Custom…" },
+    ],
+    "n",
+  ),
+  template: opt.text(
+    "Custom format",
+    "{n} / {total}",
+    "Use {n} for the number and {total} for the last number.",
+    {
+      showWhen: { key: "format", values: ["custom"] },
+    },
+  ),
+  first_number: opt.int("Start at", 0, 1_000_000, 1),
+  pages: opt.pages("Pages to number", "Leave empty to number every page.", true),
+  skip_first: opt.bool("Don't number the first page", false, "For a cover page."),
+  facing: opt.bool(
+    "Facing pages",
+    false,
+    "Mirror left/right positions on even pages, like a printed book.",
+  ),
+  margin: opt.choice(
+    "Margin",
+    [
+      { value: "small", label: "Small" },
+      { value: "medium", label: "Medium" },
+      { value: "large", label: "Large" },
+    ],
+    "medium",
+    undefined,
+    { segmented: true },
+  ),
+  font: opt.choice("Font", FONT_CHOICES, "helvetica"),
+  bold: opt.bool("Bold", false),
+  size: opt.int("Size", 6, 72, 11),
+  color: opt.color("Color", "#000000"),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -817,18 +883,31 @@ export const TOOLS: readonly ToolDef[] = [
     phase: 3,
     keywords: ["annotate", "draw", "write"],
   }),
-  soon({
+  {
     id: "page-numbers",
     ref: "E2",
     name: "Add Page Numbers",
     description: "Number pages with your choice of position, format and style.",
     category: "edit",
     icon: Hash,
-    accepts: manyPdfs,
+    accepts: onePdf,
+    optionsSchema: pageNumberOptions,
+    status: "available",
     priority: "must",
     phase: 1,
-    keywords: ["numbering", "pagination"],
-  }),
+    engineMethod: "page-numbers",
+    actionLabel: "Add page numbers",
+    keywords: ["numbering", "pagination", "footer", "page x of y"],
+    toEngine: (o) => ({
+      ...o,
+      margin: MARGIN_POINTS[String(o.margin)] ?? 28,
+      pages: typeof o.pages === "string" && o.pages.trim() ? o.pages : "all",
+    }),
+    summary: (s) =>
+      typeof s.numbered === "number"
+        ? `Numbered ${s.numbered} ${s.numbered === 1 ? "page" : "pages"} (${String(s.first)}–${String(s.last)})`
+        : null,
+  },
   soon({
     id: "watermark",
     ref: "E3",

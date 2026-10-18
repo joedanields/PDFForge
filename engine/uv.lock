@@ -386,6 +386,7 @@ dependencies = [
     { name = "pillow" },
     { name = "pypdf" },
     { name = "pypdfium2" },
+    { name = "reportlab" },
 ]
 
 [package.dev-dependencies]
@@ -397,7 +398,6 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-xdist" },
-    { name = "reportlab" },
     { name = "ruff" },
 ]
 
@@ -410,6 +410,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=11.0" },
     { name = "pypdf", specifier = ">=5.1" },
     { name = "pypdfium2", specifier = ">=4.30" },
+    { name = "reportlab", specifier = ">=4.2" },
 ]
 
 [package.metadata.requires-dev]
@@ -421,7 +422,6 @@ dev = [
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-cov", specifier = ">=6.0" },
     { name = "pytest-xdist", specifier = ">=3.6" },
-    { name = "reportlab", specifier = ">=4.2" },
     { name = "ruff", specifier = ">=0.8" },
 ]
 

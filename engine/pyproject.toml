@@ -14,6 +14,7 @@ dependencies = [
     "Pillow>=11.0",
     "img2pdf>=0.5.1",
     "pi-heif>=0.20",
+    "reportlab>=4.2",  # page numbers / watermark overlays (BSD)
 ]
 
 [dependency-groups]
@@ -21,7 +22,6 @@ dev = [
     "pytest>=8.3",
     "pytest-xdist>=3.6",
     "pytest-cov>=6.0",
-    "reportlab>=4.2",
     "ruff>=0.8",
     "black>=24.10",
     "mypy>=1.13",

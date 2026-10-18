@@ -23,7 +23,7 @@ const FEATURE_REFS = [
 
 const product = TOOLS.filter((t) => !t.devOnly);
 
-/** Tools with a working engine method, in registry order (grows through Phase 1). */
+/** Tools with a working engine method (grows through Phase 1). */
 const IMPLEMENTED = [
   "merge",
   "split",
@@ -31,6 +31,7 @@ const IMPLEMENTED = [
   "extract-pages",
   "organize",
   "rotate",
+  "page-numbers",
   "image-to-pdf",
   "pdf-to-image",
   "protect",
@@ -76,7 +77,8 @@ describe("tool registry contents", () => {
     for (const tool of TOOLS.filter((t) => t.status === "available")) {
       expect(tool.engineMethod).toBeTruthy();
     }
-    expect(product.filter((t) => t.status === "available").map((t) => t.id)).toEqual(IMPLEMENTED);
+    const available = product.filter((t) => t.status === "available").map((t) => t.id);
+    expect(available.sort()).toEqual([...IMPLEMENTED].sort());
   });
 
   it("keeps input limits consistent", () => {
@@ -202,5 +204,35 @@ describe("split page badges", () => {
     expect(at({ mode: "size" }, 0)).toBeNull();
     expect(at({ mode: "bookmarks" }, 0)).toBeNull();
     expect(at({ mode: "ranges", ranges: "1-99" }, 0)).toBeNull();
+  });
+});
+
+describe("form field kinds", () => {
+  it("describes position grids, colours, passwords and confirmations", async () => {
+    const { describeOptions } = await import("./options");
+    const { pageNumberOptions, protectOptions } = await import("./registry");
+    const numbers = describeOptions(pageNumberOptions);
+    expect(numbers.find((f) => f.key === "position")?.meta.grid).toBe(true);
+    expect(numbers.find((f) => f.key === "color")?.kind).toBe("color");
+    const protect = describeOptions(protectOptions);
+    expect(protect.find((f) => f.key === "user_password")?.kind).toBe("password");
+    expect(protect.find((f) => f.key === "user_password_confirm")?.meta.confirmOf).toBe(
+      "user_password",
+    );
+  });
+
+  it("never sends confirmations and keeps passwords out of options", async () => {
+    const { splitSecrets } = await import("./options");
+    const { protectOptions } = await import("./registry");
+    const values = protectOptions.parse({
+      user_password: "a",
+      user_password_confirm: "a",
+      allow_copy: false,
+    });
+    const { options, secrets } = splitSecrets(protectOptions, values);
+    expect(secrets).toEqual({ user_password: "a", owner_password: "" });
+    expect(options).not.toHaveProperty("user_password");
+    expect(options).not.toHaveProperty("user_password_confirm");
+    expect(options.allow_copy).toBe(false);
   });
 });

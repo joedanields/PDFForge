@@ -512,7 +512,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
           )}
         </div>
 
-        <aside className="h-fit space-y-6 rounded-card border bg-surface p-5 lg:sticky lg:top-24">
+        <aside className="h-fit space-y-6 rounded-card border bg-surface p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
             {t("tool.options")}
           </h2>

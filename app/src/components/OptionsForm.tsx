@@ -89,6 +89,67 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
     );
   }
 
+  if (field.kind === "enum" && field.meta.grid) {
+    return (
+      <fieldset className="space-y-2" disabled={disabled}>
+        <legend className="mb-2 text-sm font-medium">{field.meta.label}</legend>
+        <div
+          role="radiogroup"
+          aria-label={field.meta.label}
+          className="grid w-36 grid-cols-3 gap-1 rounded-md border bg-surface-2/60 p-1"
+        >
+          {field.meta.choices?.map((c) => {
+            const active = String(value) === c.value;
+            return (
+              <button
+                key={c.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                aria-label={c.label}
+                title={c.label}
+                onClick={() => onChange(c.value)}
+                className={cn(
+                  "flex h-9 items-center justify-center rounded transition-colors",
+                  active ? "bg-primary" : "hover:bg-surface",
+                )}
+              >
+                <span
+                  className={cn(
+                    "size-2.5 rounded-full",
+                    active ? "bg-primary-foreground" : "bg-text-muted/50",
+                  )}
+                  aria-hidden
+                />
+              </button>
+            );
+          })}
+        </div>
+        {help}
+      </fieldset>
+    );
+  }
+
+  if (field.kind === "color") {
+    const color = typeof value === "string" ? value : "#000000";
+    return (
+      <div className="flex items-center justify-between gap-4">
+        <Label htmlFor={id}>{field.meta.label}</Label>
+        <span className="flex items-center gap-2">
+          <span className="font-mono text-xs text-text-muted">{color.toUpperCase()}</span>
+          <input
+            id={id}
+            type="color"
+            value={color}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            className="h-9 w-12 cursor-pointer rounded border bg-surface p-1"
+          />
+        </span>
+      </div>
+    );
+  }
+
   if (field.kind === "enum" && field.meta.segmented) {
     return (
       <fieldset className="space-y-2" disabled={disabled}>

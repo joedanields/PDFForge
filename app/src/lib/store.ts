@@ -59,7 +59,8 @@ export async function initAppStore(): Promise<void> {
     api.engineStatus(),
     api.appInfo(),
   ]);
-  useAppStore.setState({ settings, engine, appInfo });
+  // A status event may have arrived while we were fetching; never overwrite it with older data.
+  useAppStore.setState((state) => ({ settings, appInfo, engine: state.engine ?? engine }));
   applyTheme(settings.theme);
   await store.refreshRecents();
 }

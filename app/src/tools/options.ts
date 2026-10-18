@@ -16,6 +16,10 @@ export interface FieldMeta {
   choices?: Choice[];
   /** Render choices as a row of buttons instead of a dropdown. */
   segmented?: boolean;
+  /** Render a 9-choice option as a 3×3 position picker (top-left … bottom-right). */
+  grid?: boolean;
+  /** Text option holding a #RRGGBB colour. */
+  color?: boolean;
   /** Page-range text bound to the thumbnail grid; empty means "all pages" when set. */
   pages?: { emptyMeansAll: boolean };
   /** Only show this field while another option has one of these values. */
@@ -91,12 +95,21 @@ export const opt = {
   confirm(label: string, of: string, extra?: Extra) {
     return withMeta(z.string().default(""), { label, secret: true, confirmOf: of, ...extra });
   },
+  color(label: string, defaultValue: string, help?: string, extra?: Extra) {
+    return withMeta(
+      z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/)
+        .default(defaultValue),
+      { label, help, color: true, ...extra },
+    );
+  },
   pages(label: string, help: string, emptyMeansAll: boolean, extra?: Extra) {
     return withMeta(z.string().default(""), { label, help, pages: { emptyMeansAll }, ...extra });
   },
 };
 
-export type FieldKind = "boolean" | "enum" | "number" | "string" | "pages" | "password";
+export type FieldKind = "boolean" | "enum" | "number" | "string" | "pages" | "password" | "color";
 
 export interface FieldDescriptor {
   key: string;
@@ -141,7 +154,13 @@ export function describeOptions(schema: z.AnyZodObject): FieldDescriptor[] {
         max: inner.maxValue ?? undefined,
       };
     }
-    const kind: FieldKind = meta.pages ? "pages" : meta.secret ? "password" : "string";
+    const kind: FieldKind = meta.pages
+      ? "pages"
+      : meta.secret
+        ? "password"
+        : meta.color
+          ? "color"
+          : "string";
     return { key, kind, meta, defaultValue };
   });
 }
