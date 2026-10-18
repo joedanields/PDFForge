@@ -1,13 +1,33 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath, URL } from "node:url";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
+
+/**
+ * Dev server only: when its live-reload socket reconnects, Vite's client pings through a
+ * SharedWorker created from a blob URL. That worker lingers in the WebView and breaks the
+ * Playwright-over-WebView2 smoke test (it cannot attach to it). Hiding SharedWorker before
+ * the client runs makes Vite use its plain polling fallback. Never part of a production build.
+ */
+function noDevSharedWorker(): Plugin {
+  return {
+    name: "pdfforge:no-dev-shared-worker",
+    apply: "serve",
+    transformIndexHtml: () => [
+      {
+        tag: "script",
+        children: "window.SharedWorker = undefined;",
+        injectTo: "head-prepend",
+      },
+    ],
+  };
+}
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://v2.tauri.app/start/frontend/vite/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), noDevSharedWorker()],
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },

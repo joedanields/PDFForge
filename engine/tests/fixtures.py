@@ -213,6 +213,7 @@ def make_image_pdf(
     *,
     seed: int = 1,
     quality: int = 92,
+    grain: int = 4,
 ) -> Path:
     """A 'scanned' PDF: each A4 page is one noisy RGB photo (hard to compress), JPEG-encoded."""
     import io
@@ -223,8 +224,9 @@ def make_image_pdf(
     rng = random.Random(seed)
     c = canvas.Canvas(str(path), pagesize=A4)
     for n in range(1, pages + 1):
-        noise = bytes(rng.getrandbits(8) for _ in range(pixels[0] * pixels[1] * 3 // 16))
-        img = Image.frombytes("RGB", (pixels[0] // 4, pixels[1] // 4), noise).resize(pixels)
+        small = (max(1, pixels[0] // grain), max(1, pixels[1] // grain))
+        noise = rng.randbytes(small[0] * small[1] * 3)
+        img = Image.frombytes("RGB", small, noise).resize(pixels, Image.Resampling.BILINEAR)
         buffer = io.BytesIO()
         img.save(buffer, "JPEG", quality=quality)
         buffer.seek(0)

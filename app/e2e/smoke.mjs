@@ -25,6 +25,7 @@ const AVAILABLE = [
   "unlock",
   "page-numbers",
   "watermark",
+  "compress",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -563,6 +564,41 @@ if (section("watermark")) {
   const result = await runAndWait("Add watermark");
   expect(result.includes("Watermarked 5 pages"), "result: Watermarked 5 pages");
   expect(/mixed_watermark( \(\d+\))?\.pdf/.test(result), "output named mixed_watermark.pdf");
+}
+
+if (section("compress")) {
+  console.log("Compress");
+  await go("#/tool/compress");
+  await addFiles("bigscan.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
+  expect(!(await page.getByText("JPEG quality").isVisible()), "custom settings hidden for presets");
+  await page.getByLabel("Compression", { exact: true }).click();
+  await page.getByRole("option", { name: "Custom…" }).click();
+  await page.getByText("JPEG quality").waitFor();
+  await page.getByLabel("Compression", { exact: true }).click();
+  await page.getByRole("option", { name: /Recommended/ }).click();
+  const text = await runAndWait("Compress PDF");
+  expect(/\d+(\.\d+)? (KB|MB) → \d+(\.\d+)? (KB|MB)/.test(text), "shows original → new size");
+  expect(/\d+% smaller/.test(text), "shows % saved");
+  expect(text.includes("Recompressed 2 of 2 images"), "both scans recompressed");
+  await shot("compress-result");
+  const compressed = await page.locator("main section p.truncate").first().getAttribute("title");
+  await startOver();
+  // Compressing the result again cannot gain anything: the original must be kept.
+  await page.evaluate(
+    (path) => window.dispatchEvent(new CustomEvent("pdfforge:test-add-files", { detail: [path] })),
+    compressed,
+  );
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
+  const kept = await runAndWait("Compress PDF");
+  expect(
+    kept.includes("already well optimized"),
+    "no gain: original kept and the user is told (B1)",
+  );
+  expect(
+    !(await page.getByRole("button", { name: "Open file" }).isVisible()),
+    "no new file to open",
+  );
 }
 
 if (!only || only.has("echo") || echoOnly) {

@@ -510,6 +510,35 @@ export const watermarkOptions = z.object({
   pages: opt.pages("Pages", "Leave empty to watermark every page.", true),
 });
 
+export const compressOptions = z.object({
+  level: opt.choice(
+    "Compression",
+    [
+      { value: "extreme", label: "Extreme — smallest file (72 dpi images)" },
+      { value: "recommended", label: "Recommended — good quality (150 dpi)" },
+      { value: "low", label: "Low — best quality (300 dpi)" },
+      { value: "custom", label: "Custom…" },
+    ],
+    "recommended",
+    "Only pictures are compressed; text and drawings stay sharp.",
+  ),
+  dpi: opt.int("Image resolution (dpi)", 36, 600, 150, undefined, {
+    showWhen: { key: "level", values: ["custom"] },
+  }),
+  quality: opt.int("JPEG quality", 10, 95, 60, "Lower is smaller.", {
+    showWhen: { key: "level", values: ["custom"] },
+  }),
+  grayscale: opt.bool("Convert images to grayscale", false, undefined, {
+    showWhen: { key: "level", values: ["custom"] },
+  }),
+  remove_metadata: opt.bool(
+    "Remove metadata",
+    false,
+    "Author, title and other document properties.",
+    { showWhen: { key: "level", values: ["custom"] } },
+  ),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -688,18 +717,38 @@ export const TOOLS: readonly ToolDef[] = [
   },
 
   // ── B. Optimize ───────────────────────────────────────────────────────────────────────────
-  soon({
+  {
     id: "compress",
     ref: "B1",
     name: "Compress PDF",
     description: "Shrink file size for email and upload, with a before/after comparison.",
     category: "optimize",
     icon: Minimize2,
-    accepts: manyPdfs,
+    accepts: onePdf,
+    optionsSchema: compressOptions,
+    status: "available",
     priority: "must",
     phase: 1,
-    keywords: ["reduce", "smaller", "size", "optimize"],
-  }),
+    engineMethod: "compress",
+    actionLabel: "Compress PDF",
+    keywords: ["reduce", "smaller", "size", "optimize", "shrink", "email"],
+    toEngine: (o) =>
+      o.level === "custom"
+        ? {
+            level: "custom",
+            dpi: o.dpi,
+            quality: o.quality,
+            grayscale: o.grayscale,
+            remove_metadata: o.remove_metadata,
+          }
+        : { level: o.level },
+    summary: (s) =>
+      s.kept_original === true
+        ? null
+        : typeof s.images_recompressed === "number" && typeof s.images === "number"
+          ? `Recompressed ${s.images_recompressed} of ${s.images} images`
+          : null,
+  },
   soon({
     id: "repair",
     ref: "B2",

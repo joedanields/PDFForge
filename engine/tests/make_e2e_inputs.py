@@ -35,6 +35,7 @@ def main(out: Path) -> None:
     make_exif_rotated_jpeg(out / "photo.jpg", (800, 400))  # displays portrait
     make_heic(out / "phone.heic")
     make_image_pdf(out / "scan.pdf", 2, (400, 500))
+    make_image_pdf(out / "bigscan.pdf", 2, (1654, 2339), quality=95, grain=3)  # 200 dpi
     print(f"e2e inputs written to {out}")
 
 
