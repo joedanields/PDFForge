@@ -32,6 +32,21 @@
 | pyHanko | MIT | ✅ |
 | camelot | MIT | ✅ (may need Ghostscript ⚠️) |
 | PyInstaller | GPL with bootloader exception | ✅ for distributing frozen apps |
+| pi-heif (HEIC decoding) | BSD-3-Clause; bundles libheif + libde265 (LGPL-3.0) | ✅ decode-only build — no GPL x265 encoder (pillow-heif is used only in tests) |
+| lxml (pikepdf dependency) | BSD-3-Clause; bundles libxml2/libxslt (MIT) | ✅ |
+| charset-normalizer (ReportLab dependency) | MIT | ✅ |
+| MinGW runtime DLLs (libgcc, libstdc++, libwinpthread; inside pikepdf / pi-heif wheels) | GPL-3.0 with GCC Runtime Library Exception 3.1 / MIT | ✅ runtime exception permits redistribution |
+| Python runtime incl. OpenSSL, libffi, zlib | PSF-2.0, Apache-2.0, MIT, zlib | ✅ |
+| Inter font (@fontsource-variable/inter) | OFL-1.1 | ✅ |
+| Lucide icons, cmdk, dnd-kit, Zustand, zod, Radix | ISC / MIT | ✅ |
+| Rust crates linked into the app (~250, incl. rusqlite/SQLite) | mostly MIT / Apache-2.0; a few BSD-3-Clause, MPL-2.0, Unicode-3.0 | ✅ |
+| NSIS installer stub | zlib/libpng, bzip2, CPL-1.0 | ✅ |
+| WebView2 bootstrapper (embedded in the installer) | Microsoft distribution terms | ✅ permitted redistribution |
+
+`THIRD_PARTY_NOTICES.txt` is generated from what a build actually ships by
+`scripts/generate_notices.py` (engine bundle analysis, production UI bundle, Rust dependency
+graph). pdfplumber, pdfminer.six, cryptography and pypdf are installed but not yet imported by
+any tool, so they are not shipped (yet); they will appear automatically once a tool uses them.
 
 ## 3. AGPL decision (choose one)
 1. **Open-source your app under AGPL-3.0** — simplest if it's a free/personal project.
@@ -51,7 +66,7 @@
 - New dependencies are checked against this rule before they are added.
 
 ## 4. Obligations checklist
-- [ ] Ship `THIRD_PARTY_NOTICES.txt` with all licenses; show it in Settings → About.
+- [x] Ship `THIRD_PARTY_NOTICES.txt` with all licenses (generated, bundled in the installer); show it in Settings → About (viewer: later phase).
 - [ ] Provide source/offer for any LGPL/MPL/AGPL components as required.
 - [ ] Privacy policy stating local-only processing (needed for any store listing).
 - [ ] EULA in the installer.

@@ -12,7 +12,18 @@ a = Analysis(
     pathex=[str(ENGINE_DIR)],
     binaries=[],
     datas=[],
-    hiddenimports=["tools.organize", "tools.debug"],
+    # Tools are imported through tools/__init__.py; listed explicitly so a refactor there
+    # cannot silently drop one from the frozen build. worker.py is the job-process entry point.
+    hiddenimports=[
+        "worker",
+        "tools.debug",
+        "tools.edit",
+        "tools.from_pdf",
+        "tools.optimize",
+        "tools.organize",
+        "tools.security",
+        "tools.to_pdf",
+    ],
     hookspath=[],
     runtime_hooks=[],
     excludes=[
@@ -20,7 +31,6 @@ a = Analysis(
         "unittest",
         "pydoc",
         "pytest",
-        "reportlab",
         "IPython",
         "matplotlib",
         "numpy.tests",

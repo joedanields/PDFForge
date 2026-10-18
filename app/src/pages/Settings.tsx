@@ -1,4 +1,4 @@
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, ScrollText } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
@@ -117,12 +117,27 @@ export function SettingsPage() {
             {appInfo?.dataDir ?? "—"}
           </dd>
         </dl>
-        <Button variant="secondary" asChild>
-          <Link to="/tool/echo">
-            <FlaskConical aria-hidden />
-            {t("settings.selfTest")}
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" asChild>
+            <Link to="/tool/echo">
+              <FlaskConical aria-hidden />
+              {t("settings.selfTest")}
+            </Link>
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={!isTauri()}
+            onClick={() =>
+              void api
+                .openNotices()
+                .catch((err: unknown) => setMessage({ tone: "error", text: String(err) }))
+            }
+          >
+            <ScrollText aria-hidden />
+            {t("settings.notices")}
+          </Button>
+        </div>
+        <p className="text-xs text-text-muted">{t("settings.licenceNote")}</p>
       </Section>
     </div>
   );

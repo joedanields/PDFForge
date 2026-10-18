@@ -140,6 +140,24 @@ pub fn open_output(db: State<'_, Arc<Db>>, path: String) -> CmdResult<()> {
     tauri_plugin_opener::open_path(&path, None::<&str>).map_err(|e| e.to_string())
 }
 
+/// Open the bundled THIRD_PARTY_NOTICES.txt (Settings → About, docs/09 §4).
+#[tauri::command]
+pub fn open_notices(app: tauri::AppHandle) -> CmdResult<()> {
+    use tauri::Manager;
+    let path = if cfg!(debug_assertions) {
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../THIRD_PARTY_NOTICES.txt")
+    } else {
+        app.path()
+            .resource_dir()
+            .map_err(|e| e.to_string())?
+            .join("THIRD_PARTY_NOTICES.txt")
+    };
+    if !path.is_file() {
+        return Err("The licence file is missing. Please reinstall PDFForge.".into());
+    }
+    tauri_plugin_opener::open_path(&path, None::<&str>).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn reveal_output(db: State<'_, Arc<Db>>, path: String) -> CmdResult<()> {
     ensure_known_output(&db, &path)?;

@@ -152,6 +152,7 @@ pub fn run() {
             commands::clear_history,
             commands::open_output,
             commands::reveal_output,
+            commands::open_notices,
             commands::read_input_file,
             commands::file_stats,
         ])

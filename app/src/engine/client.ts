@@ -101,6 +101,7 @@ export const api = {
   clearHistory: () => invoke<undefined>("clear_history"),
   openOutput: (path: string) => invoke<undefined>("open_output", { path }),
   revealOutput: (path: string) => invoke<undefined>("reveal_output", { path }),
+  openNotices: () => invoke<undefined>("open_notices"),
   fileStats: (paths: string[]) => invoke<FileStat[]>("file_stats", { paths }),
   readInputFile: (path: string) => invoke<ArrayBuffer>("read_input_file", { path }),
 };

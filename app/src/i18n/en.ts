@@ -113,6 +113,9 @@ export const en = {
   "settings.version": "Version {version}",
   "settings.engine": "PDF engine",
   "settings.selfTest": "Run engine self-test",
+  "settings.notices": "Third-party licences",
+  "settings.licenceNote":
+    "PDFForge is built from open-source components. It contains no AGPL software, and all processing runs on this computer.",
   "settings.dataDir": "Data folder",
   "settings.offline": "All processing happens on this computer. No files leave your device.",
   "engine.starting": "Starting PDF engine…",
