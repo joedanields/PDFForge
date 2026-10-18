@@ -120,6 +120,8 @@ const NO_OPTIONS = z.object({});
 
 const onePdf: AcceptSpec = { extensions: PDF, min: 1, max: 1, label: "One PDF file" };
 const manyPdfs: AcceptSpec = { extensions: PDF, min: 1, max: 500, label: "PDF files" };
+/** Conversions take up to 100 files at a time (engine CONVERT_MAX). */
+const convertPdfs: AcceptSpec = { extensions: PDF, min: 1, max: 100, label: "PDF files" };
 const twoPdfs: AcceptSpec = { extensions: PDF, min: 2, max: 2, label: "Two PDF files" };
 
 function soon(
@@ -565,6 +567,46 @@ export const excelToPdfOptions = z.object({
   ),
 });
 
+const OCR_LANGUAGES = [
+  { value: "eng", label: "English" },
+  { value: "tam", label: "Tamil" },
+  { value: "hin", label: "Hindi" },
+  { value: "eng+tam", label: "English + Tamil" },
+  { value: "eng+hin", label: "English + Hindi" },
+] as const;
+
+export const pdfToWordOptions = z.object({
+  ocr: opt.bool(
+    "Recognise text in scanned pages (OCR)",
+    false,
+    "Scanned pages become editable text instead of pictures. Slower.",
+  ),
+  languages: opt.choice("Document language", OCR_LANGUAGES, "eng", undefined, {
+    showWhen: { key: "ocr", values: ["true"] },
+  }),
+});
+
+export const pdfToExcelOptions = z.object({
+  layout: opt.choice(
+    "What to export",
+    [
+      { value: "tables", label: "Detected tables — one sheet per table" },
+      { value: "pages", label: "Everything — one sheet per page" },
+      { value: "single", label: "Everything — one sheet in total" },
+    ],
+    "tables",
+    "Tables are found by their ruling lines. Without any, the text is split into columns.",
+  ),
+});
+
+export const pdfToTextOptions = z.object({
+  keep_layout: opt.bool(
+    "Keep the page layout",
+    false,
+    "Pads lines with spaces so columns stay aligned. Off: plain reading order.",
+  ),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -963,42 +1005,77 @@ export const TOOLS: readonly ToolDef[] = [
       return `${s.pages} ${s.pages === 1 ? "page" : "pages"} → ${fmt} at ${String(s.dpi)} dpi`;
     },
   },
-  soon({
+  {
     id: "pdf-to-word",
     ref: "D2",
     name: "PDF to Word",
     description: "Turn a PDF into an editable DOCX document (best-effort layout).",
     category: "convert",
     icon: FileType,
-    accepts: manyPdfs,
+    accepts: convertPdfs,
+    optionsSchema: pdfToWordOptions,
+    status: "available",
     priority: "must",
     phase: 2,
-    keywords: ["docx", "editable"],
-  }),
-  soon({
+    engineMethod: "pdf-to-word",
+    actionLabel: "Convert to Word",
+    keywords: ["docx", "editable", "doc"],
+    toEngine: (o) =>
+      o.ocr ? { ocr: true, languages: String(o.languages).split("+") } : { ocr: false },
+    summary: (s) => {
+      if (typeof s.pages !== "number") return null;
+      const pages = `${s.pages} ${s.pages === 1 ? "page" : "pages"}`;
+      return typeof s.files === "number" && s.files > 1
+        ? `${s.files} files from ${pages}`
+        : `${pages} converted`;
+    },
+  },
+  {
     id: "pdf-to-powerpoint",
     ref: "D3",
     name: "PDF to PowerPoint",
-    description: "Make a PPTX with one slide per page.",
+    description: "Make a PPTX with one slide per page and editable text boxes.",
     category: "convert",
     icon: Presentation,
-    accepts: manyPdfs,
+    accepts: convertPdfs,
+    optionsSchema: NO_OPTIONS,
+    status: "available",
     priority: "should",
     phase: 2,
+    engineMethod: "pdf-to-powerpoint",
+    actionLabel: "Convert to PowerPoint",
     keywords: ["pptx", "slides"],
-  }),
-  soon({
+    summary: (s) => {
+      if (typeof s.pages !== "number") return null;
+      const pages = `${s.pages} ${s.pages === 1 ? "page" : "pages"}`;
+      return typeof s.files === "number" && s.files > 1
+        ? `${s.files} files from ${pages}`
+        : `${pages} converted`;
+    },
+  },
+  {
     id: "pdf-to-excel",
     ref: "D4",
     name: "PDF to Excel",
     description: "Detect tables and export them to an XLSX workbook.",
     category: "convert",
     icon: Sheet,
-    accepts: manyPdfs,
+    accepts: convertPdfs,
+    optionsSchema: pdfToExcelOptions,
+    status: "available",
     priority: "should",
     phase: 2,
-    keywords: ["xlsx", "tables"],
-  }),
+    engineMethod: "pdf-to-excel",
+    actionLabel: "Convert to Excel",
+    keywords: ["xlsx", "tables", "spreadsheet"],
+    summary: (s) => {
+      if (typeof s.sheets !== "number") return null;
+      const sheets = `${s.sheets} ${s.sheets === 1 ? "sheet" : "sheets"}`;
+      return typeof s.tables === "number" && s.tables > 0
+        ? `${s.tables} ${s.tables === 1 ? "table" : "tables"} found → ${sheets}`
+        : `No ruled tables found — text exported in columns (${sheets})`;
+    },
+  },
   soon({
     id: "pdf-to-pdfa",
     ref: "D5",
@@ -1011,18 +1088,29 @@ export const TOOLS: readonly ToolDef[] = [
     phase: 2,
     keywords: ["archive", "pdfa"],
   }),
-  soon({
+  {
     id: "pdf-to-text",
     ref: "D6",
     name: "PDF to Text",
     description: "Extract the text of a PDF into a plain .txt file.",
     category: "convert",
     icon: TextCursorInput,
-    accepts: manyPdfs,
+    accepts: convertPdfs,
+    optionsSchema: pdfToTextOptions,
+    status: "available",
     priority: "could",
     phase: 2,
-    keywords: ["txt", "extract text"],
-  }),
+    engineMethod: "pdf-to-text",
+    actionLabel: "Extract text",
+    keywords: ["txt", "extract text", "copy text"],
+    summary: (s) => {
+      if (typeof s.pages !== "number") return null;
+      const pages = `${s.pages} ${s.pages === 1 ? "page" : "pages"}`;
+      return typeof s.files === "number" && s.files > 1
+        ? `${s.files} files from ${pages}`
+        : `${pages} converted`;
+    },
+  },
 
   // ── E. Edit ───────────────────────────────────────────────────────────────────────────────
   soon({

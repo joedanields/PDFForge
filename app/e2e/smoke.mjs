@@ -29,6 +29,10 @@ const AVAILABLE = [
   "word-to-pdf",
   "powerpoint-to-pdf",
   "excel-to-pdf",
+  "pdf-to-word",
+  "pdf-to-powerpoint",
+  "pdf-to-excel",
+  "pdf-to-text",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -626,6 +630,33 @@ if (section("office")) {
   await shot("excel-ready");
   const book = await runAndWait("Convert to PDF");
   expect(/\b1 page\b/.test(book), "active sheet fitted on one page");
+}
+
+if (section("frompdf")) {
+  console.log("PDF to Word / Excel / PowerPoint / Text");
+  await go("#/tool/pdf-to-word");
+  await addFiles("invoice-scan.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol li").length === 1);
+  expect(!(await page.getByText("Document language").isVisible()), "language hidden without OCR");
+  await page.getByLabel("Recognise text in scanned pages (OCR)").click();
+  await page.getByText("Document language").waitFor();
+  const word = await runAndWait("Convert to Word");
+  expect(/invoice-scan( \(\d+\))?\.docx/.test(word), "scan → invoice-scan.docx");
+  await go("#/tool/pdf-to-excel");
+  await addFiles("annual.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
+  const excel = await runAndWait("Convert to Excel");
+  expect(excel.includes("1 table found → 1 sheet"), "ruled table → one sheet");
+  await go("#/tool/pdf-to-powerpoint");
+  await addFiles("annual.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
+  const deck = await runAndWait("Convert to PowerPoint");
+  expect(/annual( \(\d+\))?\.pptx/.test(deck) && deck.includes("2 pages"), "2 pages → PPTX");
+  await go("#/tool/pdf-to-text");
+  await addFiles("annual.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
+  const text = await runAndWait("Extract text");
+  expect(/annual( \(\d+\))?\.txt/.test(text), "text extracted to annual.txt");
 }
 
 if (!only || only.has("echo") || echoOnly) {

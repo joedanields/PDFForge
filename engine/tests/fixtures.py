@@ -320,3 +320,91 @@ def make_encrypted_office(path: Path) -> Path:
     """What a password-protected DOCX/XLSX/PPTX looks like: an OLE compound file."""
     path.write_bytes(bytes.fromhex("D0CF11E0A1B11AE1") + b"\0" * 504)
     return path
+
+
+def make_document_pdf(path: Path, pages: int = 2) -> Path:
+    """A typical digitally created report: title, headings, wrapped paragraphs with bold /
+    italic / coloured words, a ruled table and a picture (for PDF → Word / Excel / PPT)."""
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import (
+        Image as RLImage,
+    )
+    from reportlab.platypus import (
+        PageBreak,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+    from reportlab.platypus import (
+        Paragraph as RLParagraph,
+    )
+
+    styles = getSampleStyleSheet()
+    picture = path.with_suffix(".picture.png")
+    Image.new("RGB", (240, 160), (30, 120, 200)).save(picture)
+    story: list[Any] = [RLParagraph("Annual Report 2026", styles["Title"])]
+    for n in range(1, pages + 1):
+        story.append(RLParagraph(f"Chapter {n} overview", styles["Heading1"]))
+        story.append(
+            RLParagraph(
+                "This paragraph contains <b>bold words</b>, <i>italic words</i> and "
+                '<font color="#C00000">red words</font>. '
+                + "The quick brown fox jumps over the lazy dog. " * 8,
+                styles["BodyText"],
+            )
+        )
+        story.append(
+            RLParagraph("Second paragraph. " + "Lorem ipsum dolor sit. " * 10, styles["BodyText"])
+        )
+        if n == 1:
+            table = Table(
+                [["Region", "Q1", "Q2"], ["North", "120", "135"], ["South", "98", "101"]],
+                colWidths=[120, 60, 60],
+            )
+            table.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.5, colors.black)]))
+            story += [Spacer(1, 12), table, Spacer(1, 12), RLImage(str(picture), 120, 80)]
+        if n < pages:
+            story.append(PageBreak())
+    SimpleDocTemplate(str(path)).build(story)
+    picture.unlink()
+    return path
+
+
+def make_scanned_text_pdf(
+    path: Path,
+    lines: Sequence[str] = ("Invoice number 4711", "Total amount due 1234"),
+    pages: int = 1,
+    dpi: int = 200,
+    skew: float = 0.0,
+) -> Path:
+    """An image-only 'scan' (A4 at ``dpi``) of large black text: no text layer at all."""
+    import img2pdf
+    from PIL import ImageDraw, ImageFont
+
+    size = (round(8.27 * dpi), round(11.69 * dpi))
+    try:
+        font: Any = ImageFont.truetype("arial.ttf", round(dpi * 0.28))
+    except OSError:
+        font = ImageFont.load_default(size=round(dpi * 0.28))
+    frames = []
+    for n in range(pages):
+        img = Image.new("L", size, 255)
+        draw = ImageDraw.Draw(img)
+        for i, text in enumerate(lines):
+            draw.text(
+                (dpi, dpi + i * dpi * 0.6),
+                f"{text}" if n == 0 else f"{text} p{n + 1}",
+                fill=0,
+                font=font,
+            )
+        if skew:
+            img = img.rotate(skew, resample=Image.Resampling.BICUBIC, fillcolor=255, expand=False)
+        buffer = path.with_suffix(f".{n}.png")
+        img.save(buffer, dpi=(dpi, dpi))
+        frames.append(buffer)
+    path.write_bytes(img2pdf.convert([str(f) for f in frames]))
+    for f in frames:
+        f.unlink()
+    return path
