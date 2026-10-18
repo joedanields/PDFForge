@@ -81,7 +81,14 @@ try {
     Write-Host '==> Installing UI dependencies' -ForegroundColor Cyan
     Invoke-Checked 'pnpm install' { pnpm install --frozen-lockfile }
 
-    $tauriArgs = @('tauri', 'build', '--bundles', 'nsis')
+    # Release builds bundle vendor/ (LibreOffice, Tesseract) through an overlay config, so
+    # dev builds and CI lint/test jobs do not need the ~600 MB of vendor binaries.
+    foreach ($component in @('libreoffice', 'tesseract')) {
+        if (-not (Test-Path (Join-Path $root "vendor\$component\.pdfforge-vendor"))) {
+            throw "vendor/$component missing: run scripts/fetch-vendor.ps1"
+        }
+    }
+    $tauriArgs = @('tauri', 'build', '--bundles', 'nsis', '--config', 'src-tauri/tauri.vendor.conf.json')
     if ($signed) {
         $timestamp = if ($env:PDFFORGE_SIGN_TIMESTAMP_URL) { $env:PDFFORGE_SIGN_TIMESTAMP_URL } else { 'http://timestamp.digicert.com' }
         $signConfig = @{

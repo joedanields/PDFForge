@@ -16,6 +16,18 @@ def _no_network() -> None:
     netguard.install()
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _cache_dir(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    """One app cache per test session (the LibreOffice profile template is built once)."""
+    previous = os.environ.get("PDFFORGE_CACHE_DIR")
+    os.environ["PDFFORGE_CACHE_DIR"] = str(tmp_path_factory.mktemp("app-cache"))
+    yield
+    if previous is None:
+        os.environ.pop("PDFFORGE_CACHE_DIR", None)
+    else:
+        os.environ["PDFFORGE_CACHE_DIR"] = previous
+
+
 @pytest.fixture(autouse=True)
 def temp_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "engine-temp"

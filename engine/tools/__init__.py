@@ -5,7 +5,15 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from jobs import ToolFn
-from tools import debug, edit, from_pdf, optimize, organize, security, to_pdf
+from tools import (
+    debug,
+    edit,
+    from_pdf,
+    optimize,
+    organize,
+    security,
+    to_pdf,
+)
 
 TOOLS: Mapping[str, ToolFn] = {
     "compress": optimize.compress,

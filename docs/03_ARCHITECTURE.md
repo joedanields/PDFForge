@@ -161,3 +161,12 @@ src/
 - Large files: stream page-by-page; thumbnails generated lazily and cached.
 - All external binaries invoked with absolute paths from the install dir (never from PATH).
 - LibreOffice runs with an isolated `-env:UserInstallation` profile per job to avoid lock conflicts.
+  The profile is copied from a cached template (`%LOCALAPPDATA%\PDFForge\cache`) into a short
+  path (`%TEMP%\PDFForge\lo\<8 hex>` — LibreOffice fails silently on long profile paths) and
+  is preset for untrusted input: macros off at the highest security level, links never
+  updated, all internet access sent to a dead local proxy. `SAL_DISABLE_PRINTERLIST` /
+  `SAL_DISABLE_DEFAULTPRINTER` (plus GPU/OpenCL off) stop LibreOffice from querying the
+  system printers, which otherwise stalls every document load by ~10 s when the default
+  printer is offline. Helpers (LibreOffice, Tesseract) run inside the job's Job Object, so the
+  memory cap and kill-on-close apply to them too, and are killed with their children on
+  cancel or timeout.

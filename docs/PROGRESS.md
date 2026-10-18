@@ -5,9 +5,23 @@
 ## Now
 
 - **Current phase:** Phase 2 — Conversions
-- **Working on:** 2.0 fetch-vendor.ps1 (LibreOffice + Tesseract)
+- **Working on:** 2.1 Word / PowerPoint / Excel → PDF
 
-## Phase 1 — Core PDF tools
+## Phase 2 — Conversions
+
+| Tool | Status | Tests | Commit | Notes |
+|------|--------|-------|--------|-------|
+| 2.0 Vendor: LibreOffice + Tesseract fetch/verify/trim, helper runner | done | test_vendor (10) | (this commit) | LibreOffice 26.2.6 (~490 MB), Tesseract 5.4.0 + eng/osd/tam/hin (~134 MB); D-012–D-015 |
+| 2.1 Word / PowerPoint / Excel → PDF (C2–C4) | todo | | | |
+| 2.2 PDF → Word / Excel / PowerPoint / Text (D2–D4, D6) | todo | | | |
+| 2.3 Text / Markdown → PDF (C6) | todo | | | |
+| 2.4 Repair (B2) | todo | | | |
+| 2.5 HTML → PDF (C5) | todo | | | |
+| 2.6 PDF → PDF/A (D5) — best effort, no Ghostscript | todo | | | |
+| 2.7 OCR (B3) + OCR languages in Settings | todo | | | |
+| 2.8 Notices, Phase 2 installer + release smoke | todo | | | |
+
+## Phase 1 — Core PDF tools (done)
 
 | Tool | Status | Tests | Commit | Notes |
 |------|--------|-------|--------|-------|
@@ -24,8 +38,12 @@
 | 1.10 Page numbers | done | pytest, smoke | 0fa9c69 | Latin text only (D-007) |
 | 1.11 Watermark | done | pytest, smoke | 0102785 | |
 | 1.12 Compress | done | pytest, smoke | 09ae5f7 | AGPL-free (D-008, D-009) |
-| 1.13 Notices, release smoke, installer | done | full suite + release smoke (Echo + 13 tools in built exe) | (see git log) | installer 25.0 MB |
+| 1.13 Notices, release smoke, installer | done | full suite + release smoke (Echo + 13 tools in built exe) | a9c6dc7 | installer 25.0 MB |
 
 ## For the owner (decide / do on return)
 
-- Review [DECISIONS.md](DECISIONS.md).
+- Review [DECISIONS.md](DECISIONS.md) — in particular D-013 (GPL/LGPL DLLs inside the Tesseract build).
+- Installed for the build (inside the repo, nothing system-wide): 7-Zip 26.04 extracted to
+  `vendor/_tools/7zip` (only used to unpack the Tesseract installer). Python packages added to
+  the engine: python-docx, python-pptx, openpyxl (+ stub packages lxml-stubs, types-openpyxl
+  for type checking).

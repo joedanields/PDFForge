@@ -18,9 +18,10 @@ pdfforge/
 ├── engine/              # Python sidecar (see 03)
 │   ├── pyproject.toml
 │   └── engine.spec      # PyInstaller spec
-├── vendor/              # NOT committed; fetched by script
-│   ├── libreoffice/     # portable LibreOffice (program/ only, trimmed)
-│   └── tesseract/       # + tessdata (eng by default)
+├── vendor/              # NOT committed; fetched by scripts/fetch-vendor.ps1
+│   ├── libreoffice/     # portable LibreOffice 26.2 (program/ + share/, trimmed, ~490 MB)
+│   ├── tesseract/       # Tesseract 5.4 runtime + tessdata: eng, osd, tam, hin (~134 MB)
+│   └── _downloads/      # verified download cache (re-runs are offline)
 ├── scripts/
 │   ├── fetch-vendor.ps1 # downloads + checksums vendor binaries
 │   ├── build-engine.ps1
@@ -38,6 +39,24 @@ ocrmypdf, pyhanko, camelot-py (optional)
 
 ## 4. Build steps
 1. `scripts/fetch-vendor.ps1` — download LibreOffice and Tesseract (no Ghostscript, 09 §3); verify SHA-256; trim unneeded LibreOffice components (help, extensions, Java) to shrink size.
+   - Every download is pinned to a version and SHA-256 (LibreOffice: the `.sha256` published
+     by The Document Foundation; 7-Zip: the GitHub release digest; Tesseract installer and
+     tessdata_fast models: hashes recorded when pinned). 3 attempts with resume; a mismatch
+     aborts the build. Files are cached in `vendor/_downloads`; each component writes a stamp
+     and is skipped while the stamp matches (`-Force` rebuilds, `-Only libreoffice|tesseract`).
+   - Nothing is installed system-wide: the LibreOffice MSI is unpacked with an
+     administrative extract (`msiexec /a … TARGETDIR=…`, no registry, no elevation) and the
+     Tesseract NSIS installer is unpacked with 7-Zip (itself extracted from its MSI the same
+     way into `vendor/_tools`); the installers never run.
+   - LibreOffice trim: UI translations, dictionaries/extensions, help, Java, the bundled
+     Python, Base/Firebird, PDF import, galleries, templates, wizards, macros and all icon
+     themes but one are removed. `presets/` must stay (it seeds new user profiles; without it
+     LibreOffice hangs on first start). The metric-compatible fonts the MSI would install into
+     `C:\Windows\Fonts` (Carlito, Caladea, Liberation…) move to `share/fonts/truetype`, the
+     VC++ runtime next to `soffice.bin`.
+   - Tesseract trim: only `tesseract.exe` and the DLLs it imports (import closure computed
+     with pefile), `pdf.ttf` and `configs` for the text-only PDF renderer, plus the pinned
+     tessdata_fast models.
 2. `scripts/build-engine.ps1` — freezes the engine with PyInstaller in **onedir** mode
    (faster start than onefile), smoke-tests it with a `hello` handshake, and stages the whole
    folder for bundling:
@@ -71,8 +90,13 @@ ocrmypdf, pyhanko, camelot-py (optional)
      }
    }
    ```
-   Phase 0: the `vendor/` folders (LibreOffice, Tesseract) are added to `resources` in Phase 2. The `.pdf` file association is added together
-   with the built-in viewer (Phase 3), so "Open with PDFForge" never lands on a dead end.
+   The `vendor/` folders are added for release builds only, by the overlay
+   `app/src-tauri/tauri.vendor.conf.json` that `build-all.ps1` passes with `--config`; dev
+   builds and CI lint/test jobs therefore compile without the vendor binaries. In the installed
+   app they live at `<resources>/vendor/`, next to `<resources>/engine/`; the engine finds them
+   relative to `engine.exe` (dev: the repo's `vendor/`; override: `PDFFORGE_VENDOR_DIR`).
+   The `.pdf` file association is added together with the built-in viewer (Phase 3), so
+   "Open with PDFForge" never lands on a dead end.
 4. `cd app && pnpm install --frozen-lockfile && pnpm tauri build --bundles nsis`
 5. Output: `app/src-tauri/target/release/bundle/nsis/PDFForge_x.y.z_x64-setup.exe`
 
