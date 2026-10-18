@@ -150,11 +150,13 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
           password: undefined,
           error: res.wrongPassword ? t("file.wrongPassword") : undefined,
         });
+      } else if (tool.acceptsDamaged) {
+        patchFile(file.key, { status: "ready", pages: null, thumbnail: null });
       } else {
         patchFile(file.key, { status: "error", error: t("file.unreadable") });
       }
     },
-    [patchFile],
+    [patchFile, tool.acceptsDamaged],
   );
 
   const addPaths = useCallback(

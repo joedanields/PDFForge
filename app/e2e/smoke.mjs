@@ -34,6 +34,7 @@ const AVAILABLE = [
   "pdf-to-excel",
   "pdf-to-text",
   "text-to-pdf",
+  "repair",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -668,6 +669,20 @@ if (section("text")) {
   await page.getByRole("radio", { name: "Serif", exact: true }).click();
   const text = await runAndWait("Convert to PDF");
   expect(/notes( \(\d+\))?\.pdf/.test(text) && text.includes("1 page"), "Markdown → notes.pdf");
+}
+
+if (section("repair")) {
+  console.log("Repair");
+  await go("#/tool/repair");
+  await addFiles("damaged.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol li").length === 1);
+  expect(
+    !(await page.getByText("This file couldn't be read.").isVisible()),
+    "damaged file accepted",
+  );
+  const text = await runAndWait("Repair PDF");
+  expect(text.includes("Repaired — all 3 pages recovered"), "broken xref repaired");
+  expect(/damaged_repaired( \(\d+\))?\.pdf/.test(text), "output damaged_repaired.pdf");
 }
 
 if (!only || only.has("echo") || echoOnly) {

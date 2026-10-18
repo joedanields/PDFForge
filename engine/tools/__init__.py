@@ -34,6 +34,7 @@ TOOLS: Mapping[str, ToolFn] = {
     "powerpoint-to-pdf": office.powerpoint_to_pdf,
     "protect": security.protect,
     "remove-pages": organize.remove_pages,
+    "repair": optimize.repair,
     "rotate": organize.rotate,
     "split": organize.split,
     "text-to-pdf": to_pdf.text_to_pdf,

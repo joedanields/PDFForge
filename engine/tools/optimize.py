@@ -1,4 +1,4 @@
-"""Optimize tools (docs/02_FEATURES.md §B). Phase 1: Compress (B1).
+"""Optimize tools (docs/02_FEATURES.md §B): Compress (B1) and Repair (B2).
 
 AGPL-free by decision (docs/09 §3): pikepdf + Pillow instead of Ghostscript.
 
@@ -16,22 +16,29 @@ What Compress does:
 from __future__ import annotations
 
 import io
+import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import pikepdf
-from pikepdf import Name, ObjectStreamMode, PdfImage
+import pypdfium2 as pdfium
+from pikepdf import Name, ObjectStreamMode, Pdf, PdfImage
 from PIL import Image
+from pypdf import PdfReader, PdfWriter
 
 from jobs import JobContext, ToolResult
+from protocol import EngineError, ErrorCode
 from utils.pdfio import deliver_pdf, open_pdf, save_pdf, single_pdf_input
 from utils.placement import image_display_sizes
 from utils.validation import (
+    check_readable_file,
     option_bool,
     option_choice,
     option_int,
     options_dict,
     passwords_map,
+    require_str_list,
 )
 
 
@@ -202,3 +209,196 @@ def compress(params: dict[str, Any], ctx: JobContext) -> ToolResult:
     final = deliver_pdf(tmp, params, source, "compressed", protected=[source])
     saved = round((1 - new_bytes / original_bytes) * 100, 1)
     return ToolResult([final], {**stats, "bytes": new_bytes, "saved_percent": saved})
+
+
+# ── Repair (B2) ───────────────────────────────────────────────────────────────────────────
+
+REPAIR_MAX = 100
+_PAGE_OBJECT = re.compile(rb"/Type\s*/Page(?![a-zA-Z])")
+_COUNT = re.compile(rb"/Type\s*/Pages\b[^>]*?/Count\s+(\d+)|/Count\s+(\d+)[^>]*?/Type\s*/Pages\b")
+
+
+def expected_pages(data: bytes) -> int | None:
+    """How many pages the damaged file says it has: the largest page-tree /Count, else the
+    number of page objects. Heuristic: the file is broken, after all."""
+    counts = [int(a or b) for a, b in _COUNT.findall(data)]
+    if counts:
+        return max(counts)
+    objects = len(_PAGE_OBJECT.findall(data))
+    return objects or None
+
+
+def _healthy_pages(path: Path, ctx: JobContext) -> list[int]:
+    """Indexes of pages PDFium can load and render (a tiny render: the content must parse)."""
+    healthy = []
+    try:
+        doc = pdfium.PdfDocument(str(path))
+    except pdfium.PdfiumError:
+        return []
+    try:
+        for index in range(len(doc)):
+            ctx.check_cancelled()
+            try:
+                page = doc[index]
+                try:
+                    page.render(scale=0.05).close()
+                finally:
+                    page.close()
+                healthy.append(index)
+            except pdfium.PdfiumError:
+                continue
+    finally:
+        doc.close()
+    return healthy
+
+
+def _has_content(page: pikepdf.Page) -> bool:
+    """False when the page's content was lost (qpdf replaces missing objects with null):
+    such a page would come out blank, so it does not count as recovered."""
+    contents = page.obj.get("/Contents")
+    if contents is None:
+        return False
+    streams = list(contents) if isinstance(contents, pikepdf.Array) else [contents]
+    try:
+        return any(isinstance(s, pikepdf.Stream) and len(s.read_bytes()) > 0 for s in streams)
+    except pikepdf.PdfError:
+        return False
+
+
+def _rebuild_with_qpdf(source: Path, password: str, dest: Path, ctx: JobContext) -> bool:
+    """qpdf (via pikepdf) reconstructs the xref table and trailer while opening."""
+    try:
+        with Pdf.open(source, password=password, attempt_recovery=True) as pdf:
+            if len(pdf.pages) == 0:
+                return False
+            save_pdf(pdf, dest, ctx, start=40, end=60, message="Rebuilding", keep_encryption=True)
+        return True
+    except pikepdf.PasswordError:
+        raise
+    except (pikepdf.PdfError, RuntimeError, ValueError):
+        return False
+
+
+def _salvage_with_pypdf(source: Path, password: str, dest: Path) -> bool:
+    """Fallback: pypdf's lenient parser, page by page, skipping pages it cannot copy."""
+    try:
+        reader = PdfReader(str(source), strict=False)
+        if reader.is_encrypted:
+            reader.decrypt(password)
+        writer = PdfWriter()
+        for page in reader.pages:
+            try:
+                writer.add_page(page)
+            except Exception:  # a broken page is simply skipped
+                continue
+        if not writer.pages:
+            return False
+        with dest.open("wb") as fh:
+            writer.write(fh)
+        return True
+    except Exception:  # pypdf raises many types on garbage
+        return False
+
+
+def _had_problems(source: Path, password: str) -> bool:
+    """Did qpdf have to fix anything (warnings while opening, or structural check errors)?"""
+    try:
+        with Pdf.open(source, password=password) as pdf:
+            return bool(pdf.check_pdf_syntax() or pdf.get_warnings())
+    except pikepdf.PasswordError:
+        return False
+    except (pikepdf.PdfError, RuntimeError, ValueError):
+        return True
+
+
+def _password_error(source: Path, password: str) -> EngineError:
+    if password:
+        return EngineError(
+            ErrorCode.WRONG_PASSWORD, f"The password for {source.name} is incorrect", str(source)
+        )
+    return EngineError(
+        ErrorCode.PASSWORD_REQUIRED, f"{source.name} is password protected", str(source)
+    )
+
+
+def _repair_one(
+    source: Path, password: str, work: Path, ctx: JobContext, span: tuple[float, float]
+) -> tuple[Path, dict[str, Any]]:
+    start, width = span
+    expected = expected_pages(source.read_bytes())
+    problems = _had_problems(source, password)
+    rebuilt = work / "rebuilt.pdf"
+    method = "qpdf"
+    try:
+        ok = _rebuild_with_qpdf(source, password, rebuilt, ctx)
+    except pikepdf.PasswordError as exc:
+        raise _password_error(source, password) from exc
+    if not ok:
+        method = "pypdf"
+        ok = _salvage_with_pypdf(source, password, rebuilt)
+    if not ok:
+        raise EngineError(
+            ErrorCode.CORRUPT_FILE,
+            f"{source.name} could not be repaired: no readable pages were found",
+            str(source),
+        )
+    ctx.check_cancelled()
+    ctx.progress(start + 0.7 * width, f"Verifying pages of {source.name}")
+    final = work / "repaired.pdf"
+    with Pdf.open(rebuilt, password=password) as pdf:
+        total = len(pdf.pages)
+        rendered = list(range(total)) if pdf.is_encrypted else _healthy_pages(rebuilt, ctx)
+        healthy = [i for i in rendered if _has_content(pdf.pages[i])]
+        if not healthy:
+            raise EngineError(
+                ErrorCode.CORRUPT_FILE,
+                f"{source.name} could not be repaired: no page could be displayed",
+                str(source),
+            )
+        keep = set(healthy)
+        for index in reversed(range(total)):
+            if index not in keep:
+                del pdf.pages[index]
+        save_pdf(pdf, final, ctx, start=start + 0.8 * width, end=start + width)
+        if pdf.is_encrypted:
+            final.unlink()
+            save_pdf(pdf, final, ctx, start=start + 0.8 * width, keep_encryption=True)
+    recovered = len(healthy)
+    expected = max(expected or recovered, total)
+    if recovered < expected:
+        status = "partial"
+    elif problems or method != "qpdf":
+        status = "repaired"
+    else:
+        status = "no_problems"
+    return final, {"status": status, "pages": recovered, "expected_pages": expected}
+
+
+def repair(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Rebuild damaged PDFs: xref/trailer reconstruction (qpdf), pypdf salvage as a fallback,
+    and only pages that actually load are kept. Each file reports repaired / partial (N of M
+    pages) / no_problems; a file with nothing usable raises CORRUPT_FILE."""
+    inputs = [Path(p) for p in require_str_list(params, "inputs", min_len=1, max_len=REPAIR_MAX)]
+    for path in inputs:
+        check_readable_file(path)
+        if path.suffix.lower() != ".pdf":
+            raise EngineError(ErrorCode.INVALID_INPUT, f"{path.name} is not a PDF file", str(path))
+    passwords = passwords_map(params)
+    outputs: list[Path] = []
+    reports: list[dict[str, Any]] = []
+    for n, source in enumerate(inputs):
+        ctx.check_cancelled()
+        width = 100 / len(inputs)
+        ctx.progress(n * width, f"Checking {source.name}")
+        work = ctx.temp_dir / f"repair_{n:03d}"
+        work.mkdir(parents=True)
+        tmp, report = _repair_one(
+            source, passwords.get(str(source), ""), work, ctx, (n * width, width)
+        )
+        reports.append({"file": source.name, **report})
+        outputs.append(deliver_pdf(tmp, params, source, "repaired", protected=inputs))
+    ctx.progress(100, "Done")
+    stats: dict[str, Any] = {"files": len(outputs), "reports": reports}
+    if len(reports) == 1:
+        stats.update({k: v for k, v in reports[0].items() if k != "file"})
+    return ToolResult(outputs, stats)

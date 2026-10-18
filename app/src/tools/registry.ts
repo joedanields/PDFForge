@@ -97,6 +97,8 @@ export interface ToolDef {
   toEngine?: (options: Record<string, unknown>) => Record<string, unknown>;
   /** Extra blocker message before Run (e.g. "can't remove every page"). */
   check?: (options: Record<string, unknown>, ctx: CheckContext) => string | null;
+  /** Files that cannot be previewed are still accepted (Repair works on damaged PDFs). */
+  acceptsDamaged?: boolean;
   /** One-line, tool-specific result summary built from the job's stats. */
   summary?: (stats: Record<string, unknown>) => string | null;
 }
@@ -853,18 +855,39 @@ export const TOOLS: readonly ToolDef[] = [
           ? `Recompressed ${s.images_recompressed} of ${s.images} images`
           : null,
   },
-  soon({
+  {
     id: "repair",
     ref: "B2",
     name: "Repair PDF",
     description: "Rebuild damaged files and recover as many pages as possible.",
     category: "optimize",
     icon: Wrench,
-    accepts: manyPdfs,
+    accepts: { extensions: PDF, min: 1, max: 100, label: "Damaged PDF files" },
+    optionsSchema: NO_OPTIONS,
+    status: "available",
     priority: "should",
     phase: 2,
-    keywords: ["fix", "broken", "corrupt"],
-  }),
+    engineMethod: "repair",
+    actionLabel: "Repair PDF",
+    keywords: ["fix", "broken", "corrupt", "damaged", "recover"],
+    acceptsDamaged: true,
+    summary: (s) => {
+      const reports = Array.isArray(s.reports) ? (s.reports as Record<string, unknown>[]) : [];
+      const describe = (r: Record<string, unknown>) =>
+        r.status === "partial"
+          ? `Partially recovered (${String(r.pages)} of ${String(r.expected_pages)} pages)`
+          : r.status === "repaired"
+            ? `Repaired — all ${String(r.pages)} pages recovered`
+            : `No damage found — a clean copy with ${String(r.pages)} pages was saved`;
+      const [only, ...rest] = reports;
+      if (!only) return null;
+      if (rest.length === 0) return describe(only);
+      const partial = reports.filter((r) => r.status === "partial").length;
+      return partial
+        ? `${reports.length} files repaired, ${partial} only partially`
+        : `${reports.length} files repaired`;
+    },
+  },
   soon({
     id: "ocr",
     ref: "B3",

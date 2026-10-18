@@ -46,6 +46,7 @@ const IMPLEMENTED = [
   "pdf-to-excel",
   "pdf-to-text",
   "text-to-pdf",
+  "repair",
 ];
 
 describe("tool registry contents", () => {

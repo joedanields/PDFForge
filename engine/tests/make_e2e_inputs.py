@@ -6,6 +6,7 @@ uv run python -m tests.make_e2e_inputs <output-folder>
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -49,6 +50,8 @@ def main(out: Path) -> None:
     (out / "notes.md").write_text(
         "# Meeting notes\n\n- **Budget** approved\n- Next review in *May*\n", encoding="utf-8"
     )
+    broken = make_text_pdf(out / "damaged.pdf", 3).read_bytes()
+    (out / "damaged.pdf").write_bytes(re.sub(rb"startxref\s+\d+", b"startxref\n999999", broken))
     print(f"e2e inputs written to {out}")
 
 
