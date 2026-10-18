@@ -76,3 +76,38 @@ def check_pdf(path: Path) -> None:
         head = fh.read(_SNIFF_BYTES)
     if _PDF_MAGIC not in head:
         raise EngineError(ErrorCode.INVALID_INPUT, f"{path.name} is not a PDF file", str(path))
+
+
+def option_choice(options: dict[str, Any], key: str, choices: tuple[Any, ...], default: Any) -> Any:
+    value = options.get(key, default)
+    if value not in choices or isinstance(value, bool) != isinstance(default, bool):
+        allowed = ", ".join(str(c) for c in choices)
+        raise EngineError(ErrorCode.INVALID_INPUT, f"Option '{key}' must be one of: {allowed}")
+    return value
+
+
+def option_str(options: dict[str, Any], key: str, default: str, *, max_len: int = 10_000) -> str:
+    value = options.get(key, default)
+    if not isinstance(value, str) or len(value) > max_len:
+        raise EngineError(ErrorCode.INVALID_INPUT, f"Option '{key}' must be text")
+    return value
+
+
+def option_int(options: dict[str, Any], key: str, default: int, *, lo: int, hi: int) -> int:
+    value = options.get(key, default)
+    if not isinstance(value, int) or isinstance(value, bool) or not lo <= value <= hi:
+        raise EngineError(
+            ErrorCode.INVALID_INPUT, f"Option '{key}' must be a whole number from {lo} to {hi}"
+        )
+    return value
+
+
+def option_float(
+    options: dict[str, Any], key: str, default: float, *, lo: float, hi: float
+) -> float:
+    value = options.get(key, default)
+    if not isinstance(value, int | float) or isinstance(value, bool) or not lo <= value <= hi:
+        raise EngineError(
+            ErrorCode.INVALID_INPUT, f"Option '{key}' must be a number from {lo:g} to {hi:g}"
+        )
+    return float(value)

@@ -19,6 +19,7 @@ from protocol import (
 )
 from tests.fixtures import make_text_pdf
 from tests.helpers import EngineProcess
+from tools import TOOLS
 from utils.netguard import NetworkBlockedError
 
 # --- parsing ---------------------------------------------------------------------------------
@@ -80,7 +81,7 @@ def test_hello_handshake(engine: EngineProcess) -> None:
         "event": "hello",
         "engine_version": ENGINE_VERSION,
         "protocol_version": PROTOCOL_VERSION,
-        "methods": ["hello", "cancel", "echo", "merge"],
+        "methods": ["hello", "cancel", *sorted(TOOLS)],
     }
 
 

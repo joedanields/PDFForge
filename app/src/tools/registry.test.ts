@@ -23,6 +23,9 @@ const FEATURE_REFS = [
 
 const product = TOOLS.filter((t) => !t.devOnly);
 
+/** Tools with a working engine method, in registry order (grows through Phase 1). */
+const IMPLEMENTED = ["merge", "rotate"];
+
 describe("tool registry contents", () => {
   it("covers every tool of sections A–F exactly once", () => {
     const refs = product.filter((t) => t.ref !== "I").map((t) => t.ref);
@@ -62,7 +65,7 @@ describe("tool registry contents", () => {
     for (const tool of TOOLS.filter((t) => t.status === "available")) {
       expect(tool.engineMethod).toBeTruthy();
     }
-    expect(product.filter((t) => t.status === "available").map((t) => t.id)).toEqual(["merge"]);
+    expect(product.filter((t) => t.status === "available").map((t) => t.id)).toEqual(IMPLEMENTED);
   });
 
   it("keeps input limits consistent", () => {

@@ -13,6 +13,7 @@ dependencies = [
     "pdfplumber>=0.11",
     "Pillow>=11.0",
     "img2pdf>=0.5.1",
+    "pi-heif>=0.20",
 ]
 
 [dependency-groups]
@@ -25,6 +26,7 @@ dev = [
     "black>=24.10",
     "mypy>=1.13",
     "pyinstaller>=6.11",
+    "pillow-heif>=0.20",
 ]
 
 [tool.uv]
@@ -62,5 +64,5 @@ files = ["main.py", "jobs.py", "protocol.py", "tools", "utils", "tests"]
 exclude = ["build/", "dist/"]
 
 [[tool.mypy.overrides]]
-module = ["img2pdf", "pypdfium2", "reportlab.*", "pdfplumber"]
+module = ["img2pdf", "pypdfium2", "reportlab.*", "pdfplumber", "pi_heif", "pillow_heif"]
 ignore_missing_imports = true

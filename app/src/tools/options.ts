@@ -3,6 +3,7 @@
  * Tool page can generate its options form straight from a tool's `optionsSchema`.
  */
 import { z } from "zod";
+import { parseRanges } from "@/lib/pageRanges";
 
 export interface Choice {
   value: string;
@@ -13,6 +14,15 @@ export interface FieldMeta {
   label: string;
   help?: string;
   choices?: Choice[];
+  /** Render choices as a row of buttons instead of a dropdown. */
+  segmented?: boolean;
+  /** Page-range text bound to the thumbnail grid; empty means "all pages" when set. */
+  pages?: { emptyMeansAll: boolean };
+  /** Only show this field while another option has one of these values. */
+  showWhen?: { key: string; values: readonly string[] };
+  /** Secret values (passwords) are sent outside `options` and never stored in history. */
+  secret?: boolean;
+  placeholder?: string;
 }
 
 const META = new WeakMap<z.ZodTypeAny, FieldMeta>();
@@ -22,38 +32,60 @@ function withMeta<T extends z.ZodTypeAny>(schema: T, meta: FieldMeta): T {
   return schema;
 }
 
+type Extra = Partial<Omit<FieldMeta, "label" | "help" | "choices">>;
+
 export const opt = {
-  bool(label: string, defaultValue: boolean, help?: string) {
-    return withMeta(z.boolean().default(defaultValue), { label, help });
+  bool(label: string, defaultValue: boolean, help?: string, extra?: Extra) {
+    return withMeta(z.boolean().default(defaultValue), { label, help, ...extra });
   },
   choice<const T extends readonly [Choice, ...Choice[]]>(
     label: string,
     choices: T,
     defaultValue: T[number]["value"],
     help?: string,
+    extra?: Extra,
   ) {
     const values = choices.map((c) => c.value) as [T[number]["value"], ...T[number]["value"][]];
     return withMeta(z.enum(values).default(defaultValue), {
       label,
       help,
       choices: [...choices],
+      ...extra,
     });
   },
-  int(label: string, min: number, max: number, defaultValue: number, help?: string) {
-    return withMeta(z.number().int().min(min).max(max).default(defaultValue), { label, help });
+  int(label: string, min: number, max: number, defaultValue: number, help?: string, extra?: Extra) {
+    return withMeta(z.number().int().min(min).max(max).default(defaultValue), {
+      label,
+      help,
+      ...extra,
+    });
   },
-  text(label: string, defaultValue: string, help?: string) {
-    return withMeta(z.string().default(defaultValue), { label, help });
+  number(
+    label: string,
+    min: number,
+    max: number,
+    defaultValue: number,
+    help?: string,
+    extra?: Extra,
+  ) {
+    return withMeta(z.number().min(min).max(max).default(defaultValue), { label, help, ...extra });
+  },
+  text(label: string, defaultValue: string, help?: string, extra?: Extra) {
+    return withMeta(z.string().default(defaultValue), { label, help, ...extra });
+  },
+  pages(label: string, help: string, emptyMeansAll: boolean, extra?: Extra) {
+    return withMeta(z.string().default(""), { label, help, pages: { emptyMeansAll }, ...extra });
   },
 };
 
-export type FieldKind = "boolean" | "enum" | "number" | "string";
+export type FieldKind = "boolean" | "enum" | "number" | "string" | "pages";
 
 export interface FieldDescriptor {
   key: string;
   kind: FieldKind;
   meta: FieldMeta;
   defaultValue: unknown;
+  integer?: boolean;
   min?: number;
   max?: number;
 }
@@ -86,15 +118,53 @@ export function describeOptions(schema: z.AnyZodObject): FieldDescriptor[] {
         kind: "number",
         meta,
         defaultValue,
+        integer: inner.isInt,
         min: inner.minValue ?? undefined,
         max: inner.maxValue ?? undefined,
       };
     }
-    return { key, kind: "string", meta, defaultValue };
+    return { key, kind: meta.pages ? "pages" : "string", meta, defaultValue };
   });
+}
+
+/** Is this field visible for the current option values? */
+export function isVisible(field: FieldDescriptor, values: Record<string, unknown>): boolean {
+  const rule = field.meta.showWhen;
+  if (!rule) return true;
+  return rule.values.includes(String(values[rule.key]));
 }
 
 /** Default option values for a tool (schema parse of an empty object). */
 export function defaultOptions(schema: z.AnyZodObject): Record<string, unknown> {
   return schema.parse({});
+}
+
+/** Split secret fields (passwords) from ordinary options. */
+export function splitSecrets(
+  schema: z.AnyZodObject,
+  values: Record<string, unknown>,
+): { options: Record<string, unknown>; secrets: Record<string, unknown> } {
+  const options: Record<string, unknown> = {};
+  const secrets: Record<string, unknown> = {};
+  const secretKeys = new Set(
+    describeOptions(schema)
+      .filter((f) => f.meta.secret)
+      .map((f) => f.key),
+  );
+  for (const [key, value] of Object.entries(values)) {
+    (secretKeys.has(key) ? secrets : options)[key] = value;
+  }
+  return { options, secrets };
+}
+
+/** Error for a page-range field, or null when valid (empty = all pages when allowed). */
+export function pageFieldError(
+  field: FieldDescriptor,
+  text: string,
+  pageCount: number | null,
+): string | null {
+  if (!field.meta.pages || pageCount == null) return null;
+  if (text.trim() === "") return field.meta.pages.emptyMeansAll ? null : "Select at least one page";
+  const result = parseRanges(text, pageCount);
+  return result.ok ? null : result.error;
 }

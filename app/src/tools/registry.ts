@@ -78,6 +78,32 @@ export interface ToolDef {
   devOnly?: boolean;
   /** Hidden unless PDF Intelligence is enabled (off by default). */
   requiresIntelligence?: boolean;
+  /** "files": file cards (default). "pages": one PDF shown as a selectable page grid.
+   * "organize": page board built from one or more PDFs. */
+  layout?: "files" | "pages" | "organize";
+  /** pages layout: the page-range option that mirrors the grid selection. */
+  pageSelection?: { option: string; tone?: "select" | "remove" };
+  /** pages layout: clockwise rotation to preview on a page, in degrees. */
+  previewRotation?: (options: Record<string, unknown>, page: PagePreview) => number;
+  /** Turn validated form values into the engine's `options`. */
+  toEngine?: (options: Record<string, unknown>) => Record<string, unknown>;
+  /** Extra blocker message before Run (e.g. "can't remove every page"). */
+  check?: (options: Record<string, unknown>, ctx: CheckContext) => string | null;
+  /** One-line, tool-specific result summary built from the job's stats. */
+  summary?: (stats: Record<string, unknown>) => string | null;
+}
+
+export interface PagePreview {
+  index: number;
+  selected: boolean;
+  /** True when nothing is selected and the tool treats that as "all pages". */
+  allImplied: boolean;
+  landscape: boolean | null;
+}
+
+export interface CheckContext {
+  pageCount: number | null;
+  selectedCount: number;
 }
 
 const PDF = ["pdf"] as const;
@@ -106,6 +132,34 @@ export const mergeOptions = z.object({
     "Add a bookmark per file",
     false,
     "Adds one top-level bookmark named after each source file.",
+  ),
+});
+
+export const rotateOptions = z.object({
+  angle: opt.choice(
+    "Rotate by",
+    [
+      { value: "90", label: "90° ↻" },
+      { value: "180", label: "180°" },
+      { value: "270", label: "90° ↺" },
+    ],
+    "90",
+    "Clockwise, half turn, or counter-clockwise. Only the page orientation changes — no quality loss.",
+    { segmented: true },
+  ),
+  pages: opt.pages(
+    "Pages",
+    "Select pages in the grid or type ranges like 1-3, 5. Leave empty to rotate every page.",
+    true,
+  ),
+  orientation: opt.choice(
+    "Only rotate",
+    [
+      { value: "all", label: "All selected pages" },
+      { value: "portrait", label: "Portrait pages" },
+      { value: "landscape", label: "Landscape pages" },
+    ],
+    "all",
   ),
 });
 
@@ -185,17 +239,41 @@ export const TOOLS: readonly ToolDef[] = [
     phase: 1,
     keywords: ["reorder", "sort", "arrange"],
   }),
-  soon({
+  {
     id: "rotate",
     ref: "A6",
     name: "Rotate PDF",
     description: "Turn all or selected pages by 90°, 180° or 270° without quality loss.",
     category: "organize",
     icon: RotateCw,
-    accepts: manyPdfs,
+    accepts: onePdf,
+    optionsSchema: rotateOptions,
+    status: "available",
     priority: "must",
     phase: 1,
-  }),
+    engineMethod: "rotate",
+    actionLabel: "Rotate PDF",
+    keywords: ["turn", "orientation", "landscape", "portrait"],
+    layout: "pages",
+    pageSelection: { option: "pages" },
+    previewRotation: (options, page) => {
+      if (!page.selected && !page.allImplied) return 0;
+      const only = options.orientation;
+      if (only !== "all" && page.landscape !== null && page.landscape !== (only === "landscape")) {
+        return 0;
+      }
+      return Number(options.angle);
+    },
+    toEngine: (o) => ({
+      angle: Number(o.angle),
+      pages: typeof o.pages === "string" && o.pages.trim() ? o.pages : "all",
+      orientation: o.orientation,
+    }),
+    summary: (s) =>
+      typeof s.rotated === "number" && typeof s.pages === "number"
+        ? `Rotated ${s.rotated} of ${s.pages} pages`
+        : null,
+  },
 
   // ── B. Optimize ───────────────────────────────────────────────────────────────────────────
   soon({

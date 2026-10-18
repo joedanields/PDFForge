@@ -18,6 +18,8 @@ import { getTool } from "@/tools/registry";
 
 interface Props {
   result: DoneEvent;
+  /** Tool-specific one-liner (ToolDef.summary). */
+  summary?: string | null;
   onStartOver: () => void;
 }
 
@@ -28,7 +30,7 @@ function num(value: unknown): number | null {
 }
 
 /** Result screen: Open / Show in folder / Start over (docs/04 §2.4), plus tool-specific notes. */
-export function ResultCard({ result, onStartOver }: Props) {
+export function ResultCard({ result, summary = null, onStartOver }: Props) {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const { stats, outputs } = result;
@@ -62,6 +64,11 @@ export function ResultCard({ result, onStartOver }: Props) {
         <CircleCheck className="size-9" aria-hidden />
       </span>
       <h2 className="mt-4 text-xl font-semibold">{t("result.title")}</h2>
+      {summary && (
+        <p className="mt-1 text-base text-text" data-testid="result-summary">
+          {summary}
+        </p>
+      )}
 
       {keptOriginal && (
         <p className="mt-4 flex items-start gap-2 rounded-md bg-surface-2 px-4 py-3 text-left text-sm">

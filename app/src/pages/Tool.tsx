@@ -6,6 +6,7 @@ import { DropZone } from "@/components/DropZone";
 import { FileList } from "@/components/FileList";
 import { OptionsForm } from "@/components/OptionsForm";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
+import { PagesPanel } from "@/components/PagesPanel";
 import { ProgressOverlay } from "@/components/ProgressOverlay";
 import { ResultCard } from "@/components/ResultCard";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,18 @@ import { JobError, api, isTauri, runJob, type RunningJob } from "@/engine/client
 import { ERROR_TEXT, type DoneEvent, type ErrorEvent } from "@/engine/types";
 import { t } from "@/i18n";
 import { fileKey, sortByDate, sortByName, type InputFile } from "@/lib/files";
+import { parsePageSet } from "@/lib/pageRanges";
 import { useAppStore } from "@/lib/store";
 import { useFileDrop } from "@/lib/useFileDrop";
 import { cn, fileName } from "@/lib/utils";
 import { CATEGORY_META } from "@/tools/categories";
-import { defaultOptions } from "@/tools/options";
+import {
+  defaultOptions,
+  describeOptions,
+  isVisible,
+  pageFieldError,
+  splitSecrets,
+} from "@/tools/options";
 import { acceptsFile, getTool, type ToolDef } from "@/tools/registry";
 
 export function ToolPage() {
@@ -112,6 +120,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     filesRef.current = files;
   }, [files]);
   const needsFiles = tool.accepts.max > 0;
+  const pageTool = tool.layout === "pages";
   const editing = phase.kind === "edit";
 
   const patchFile = useCallback((key: string, patch: Partial<InputFile>) => {
@@ -214,18 +223,29 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     else if (typeof picked === "string") await addPaths([picked]);
   }, [addPaths, tool]);
 
+  // Page selections belong to one document: clear them when the document goes away.
+  const clearPageSelections = useCallback(() => {
+    const pageKeys = describeOptions(tool.optionsSchema)
+      .filter((f) => f.kind === "pages")
+      .map((f) => f.key);
+    if (pageKeys.length === 0) return;
+    setOptions((prev) => ({ ...prev, ...Object.fromEntries(pageKeys.map((k) => [k, ""])) }));
+  }, [tool]);
+
   const removeFile = (key: string) => {
     setFiles((prev) => {
       const gone = prev.find((f) => f.key === key);
       if (gone?.thumbnail) URL.revokeObjectURL(gone.thumbnail);
       return prev.filter((f) => f.key !== key);
     });
+    if (pageTool) clearPageSelections();
   };
 
   const startOver = () => {
     for (const f of filesRef.current) if (f.thumbnail) URL.revokeObjectURL(f.thumbnail);
     setFiles([]);
     setNotice(null);
+    clearPageSelections();
     setPhase({ kind: "edit" });
   };
 
@@ -240,11 +260,31 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
 
   // ── validation ─────────────────────────────────────────────────────────────────────────
   const parsed = tool.optionsSchema.safeParse(options);
+  const pageCount = files[0]?.pages ?? null;
   let blocker: string | null = null;
   if (needsFiles && files.length < tool.accepts.min) {
     blocker = t("tool.needMore", { count: tool.accepts.min });
   } else if (files.some((f) => f.status === "error" || f.status === "locked")) {
     blocker = t("tool.fixErrors");
+  } else {
+    for (const field of describeOptions(tool.optionsSchema)) {
+      if (field.kind !== "pages" || !isVisible(field, options)) continue;
+      const text = typeof options[field.key] === "string" ? (options[field.key] as string) : "";
+      const error = pageFieldError(field, text, pageCount);
+      if (error) {
+        blocker = `${field.meta.label}: ${error}`;
+        break;
+      }
+    }
+    if (!blocker && tool.check && parsed.success) {
+      const binding = tool.pageSelection;
+      const selText = binding ? options[binding.option] : undefined;
+      const selectedCount =
+        typeof selText === "string" && selText.trim() && pageCount
+          ? (parsePageSet(selText, pageCount)?.size ?? 0)
+          : 0;
+      blocker = tool.check(parsed.data, { pageCount, selectedCount });
+    }
   }
   const loading = files.some((f) => f.status === "loading");
   const canRun = editing && parsed.success && !blocker && !loading;
@@ -284,10 +324,13 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     const passwords = Object.fromEntries(
       files.filter((f) => f.password).map((f) => [f.path, f.password ?? ""]),
     );
+    const { options: plain, secrets } = splitSecrets(tool.optionsSchema, parsed.data);
+    const engineOptions = tool.toEngine ? tool.toEngine(plain) : plain;
     const params: Record<string, unknown> = {
-      options: parsed.data,
+      options: engineOptions,
+      ...(Object.keys(secrets).length > 0 && { secrets }), // never stored in history
       ...(needsFiles && { inputs: files.map((f) => f.path), passwords }),
-      ...(!needsFiles && parsed.data),
+      ...(!needsFiles && engineOptions),
       ...(outputDir && { output_dir: outputDir }),
     };
     setPhase({
@@ -342,7 +385,11 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   if (phase.kind === "done") {
     return (
       <PageShell tool={tool} title={tool.name}>
-        <ResultCard result={phase.result} onStartOver={startOver} />
+        <ResultCard
+          result={phase.result}
+          summary={tool.summary?.(phase.result.stats) ?? null}
+          onStartOver={startOver}
+        />
       </PageShell>
     );
   }
@@ -386,7 +433,17 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
               onSelect={() => void selectFiles()}
             />
           )}
-          {needsFiles && files.length > 0 && (
+          {pageTool && files[0]?.status === "ready" && (
+            <PagesPanel
+              tool={tool}
+              file={files[0]}
+              options={options}
+              onOptionsChange={setOptions}
+              onRemove={() => removeFile(files[0]?.key ?? "")}
+              disabled={!editing}
+            />
+          )}
+          {needsFiles && files.length > 0 && !(pageTool && files[0]?.status === "ready") && (
             <>
               <FileList
                 files={files}
@@ -399,7 +456,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
                 onSortByName={() => setFiles(sortByName)}
                 onSortByDate={() => setFiles(sortByDate)}
               />
-              {files.length < tool.accepts.max && (
+              {files.length < tool.accepts.max && !pageTool && (
                 <DropZone
                   compact
                   over={over}
@@ -425,6 +482,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
             value={options}
             onChange={setOptions}
             disabled={!editing}
+            pageCount={pageCount}
           />
           {needsFiles && (
             <OutputFolderPicker

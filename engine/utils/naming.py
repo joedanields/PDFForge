@@ -42,12 +42,18 @@ def resolve_output(
     return folder / default_output_name(first_input, tool, suffix)
 
 
-def candidates(desired: Path) -> Iterator[Path]:
-    """``name.pdf``, ``name (1).pdf``, ``name (2).pdf``, ... (docs/07_TESTING.md §3)."""
+def candidates(desired: Path, *, is_dir: bool = False) -> Iterator[Path]:
+    """``name.pdf``, ``name (1).pdf``, ``name (2).pdf``, ... (docs/07_TESTING.md §3).
+
+    Folders get the counter at the end of the whole name (``v1.2_split (1)``).
+    """
     yield desired
     n = 1
     while True:
-        yield desired.with_name(f"{desired.stem} ({n}){desired.suffix}")
+        if is_dir:
+            yield desired.with_name(f"{desired.name} ({n})")
+        else:
+            yield desired.with_name(f"{desired.stem} ({n}){desired.suffix}")
         n += 1
 
 
