@@ -24,6 +24,7 @@ const AVAILABLE = [
   "protect",
   "unlock",
   "page-numbers",
+  "watermark",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -531,6 +532,37 @@ if (section("numbers")) {
   const text = await runAndWait("Add page numbers");
   expect(text.includes("Numbered 4 pages (1–4)"), "result: Numbered 4 pages (1–4)");
   expect(/mixed_numbered( \(\d+\))?\.pdf/.test(text), "output named mixed_numbered.pdf");
+}
+
+if (section("watermark")) {
+  console.log("Watermark");
+  await go("#/tool/watermark");
+  await addFiles("mixed.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
+  const text = page.getByLabel("Text", { exact: true });
+  await text.fill("");
+  await page.getByText("Enter the watermark text.").waitFor();
+  expect(
+    await page.getByRole("button", { name: "Add watermark" }).isDisabled(),
+    "empty text blocks Run",
+  );
+  await text.fill("DRAFT");
+  await page.getByRole("switch", { name: "Repeat across the page" }).click();
+  expect(
+    !(await page.getByRole("radiogroup", { name: "Position" }).isVisible()),
+    "position hidden when tiled",
+  );
+  await page.getByRole("radio", { name: "Image" }).click();
+  await page.getByText("No file chosen").waitFor();
+  expect(
+    await page.getByRole("button", { name: "Add watermark" }).isDisabled(),
+    "image mode needs an image",
+  );
+  await page.getByRole("radio", { name: "Text" }).click();
+  await shot("watermark-ready");
+  const result = await runAndWait("Add watermark");
+  expect(result.includes("Watermarked 5 pages"), "result: Watermarked 5 pages");
+  expect(/mixed_watermark( \(\d+\))?\.pdf/.test(result), "output named mixed_watermark.pdf");
 }
 
 if (!only || only.has("echo") || echoOnly) {

@@ -6,10 +6,14 @@ not re-rendered, and the file keeps its password/permissions.
 
 from __future__ import annotations
 
+import math
 import re
+from pathlib import Path
 from typing import Any
 
 from pikepdf import Pdf
+from PIL import Image, ImageOps
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
@@ -19,6 +23,8 @@ from utils.overlay import GRID_POSITIONS, anchor_point, frame_of, mirror
 from utils.pdfio import deliver_pdf, open_pdf, save_pdf, single_pdf_input
 from utils.ranges import parse_page_set
 from utils.validation import (
+    IMAGE_SUFFIXES,
+    check_readable_file,
     option_bool,
     option_choice,
     option_float,
@@ -142,6 +148,160 @@ def page_numbers(params: dict[str, Any], ctx: JobContext) -> ToolResult:
             "numbered": len(selected),
             "first": first,
             "last": last,
+            "bytes": final.stat().st_size,
+        },
+    )
+
+
+# ── E3 Watermark ────────────────────────────────────────────────────────────────────────────
+
+WATERMARK_MARGIN = 36.0
+
+
+def _rotated_box(width: float, height: float, degrees: float) -> tuple[float, float]:
+    """Axis-aligned size of a ``width`` by ``height`` box rotated by ``degrees``."""
+    rad = math.radians(degrees)
+    c, s = abs(math.cos(rad)), abs(math.sin(rad))
+    return width * c + height * s, width * s + height * c
+
+
+def _stamp_centres(
+    tile: bool,
+    position: str,
+    page: tuple[float, float],
+    box: tuple[float, float],
+) -> list[tuple[float, float]]:
+    """Centre points of every stamp on a page of display size ``page``."""
+    width, height = page
+    bw, bh = box
+    if not tile:
+        x, y = anchor_point(position, page, box, WATERMARK_MARGIN)
+        return [(x + bw / 2, y + bh / 2)]
+    gap = max(min(bw, bh) * 0.6, 48.0)
+    step_x, step_y = bw + gap, bh + gap
+    centres: list[tuple[float, float]] = []
+    row = 0
+    y = step_y / 2
+    while y - bh / 2 < height:
+        offset = (step_x / 2) * (row % 2)  # brick pattern
+        x = step_x / 2 - offset
+        while x - bw / 2 < width:
+            centres.append((x, y))
+            x += step_x
+        y += step_y
+        row += 1
+    return centres
+
+
+def watermark(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    source = single_pdf_input(params)
+    options = options_dict(params)
+    kind = option_choice(options, "kind", ("text", "image"), "text")
+    tile = option_bool(options, "tile", False)
+    position = option_choice(options, "position", GRID_POSITIONS, "middle-center")
+    layer = option_choice(options, "layer", ("over", "under"), "over")
+    opacity = option_float(options, "opacity", 0.3, lo=0.02, hi=1.0)
+    rotation = option_float(options, "rotation", 45.0, lo=-180, hi=180)
+    pages_text = option_str(options, "pages", "all", max_len=2000)
+
+    text = ""
+    image: ImageReader | None = None
+    if kind == "text":
+        text = option_str(options, "text", "", max_len=200).strip()
+        if not text:
+            raise EngineError(ErrorCode.INVALID_INPUT, "Enter the watermark text")
+        _check_latin(text, "Watermark text")
+        font = _font(options)
+        size = option_float(options, "size", 48.0, lo=6, hi=400)
+        rgb = option_color(options, "color", "#808080")
+    else:
+        image_path = Path(option_str(options, "image", "", max_len=4000))
+        if not image_path.name or image_path.suffix.lower() not in IMAGE_SUFFIXES:
+            raise EngineError(ErrorCode.INVALID_INPUT, "Choose an image for the watermark")
+        check_readable_file(image_path)
+        try:
+            with Image.open(image_path) as img:
+                img.load()
+                pixel_size = img.size
+                png = ctx.temp_dir / "watermark.png"
+                (ImageOps.exif_transpose(img) or img).convert("RGBA").save(png, "PNG")
+        except (OSError, ValueError, Image.DecompressionBombError) as exc:
+            raise EngineError(
+                ErrorCode.CORRUPT_FILE,
+                f"{image_path.name} is not a readable image",
+                str(image_path),
+            ) from exc
+        image = ImageReader(str(png))
+        scale = option_float(options, "scale", 0.4, lo=0.02, hi=1.0)
+
+    tmp = ctx.temp_dir / "watermarked.pdf"
+    overlay_path = ctx.temp_dir / "watermark-overlay.pdf"
+    with open_pdf(source, passwords_map(params)) as pdf:
+        selected = parse_page_set(pages_text, len(pdf.pages))
+        # One overlay page per distinct page size: identical stamps share one form XObject.
+        sizes: dict[tuple[float, float], int] = {}
+        page_sizes = [frame_of(pdf.pages[i]).size for i in selected]
+        c = canvas.Canvas(str(overlay_path))
+        stamps = 0
+        for size_key in page_sizes:
+            key = (round(size_key[0], 2), round(size_key[1], 2))
+            if key in sizes:
+                continue
+            sizes[key] = len(sizes)
+            width, height = size_key
+            c.setPageSize((width, height))
+            c.setFillAlpha(opacity)
+            c.setStrokeAlpha(opacity)
+            if image is not None:
+                w = width * scale
+                h = w * pixel_size[1] / pixel_size[0]
+                box = _rotated_box(w, h, rotation)
+                for cx, cy in _stamp_centres(tile, position, (width, height), box):
+                    c.saveState()
+                    c.translate(cx, cy)
+                    c.rotate(rotation)
+                    c.drawImage(image, -w / 2, -h / 2, width=w, height=h, mask="auto")
+                    c.restoreState()
+                    stamps += 1
+            else:
+                tw = stringWidth(text, font, size)
+                th = size * CAP_HEIGHT
+                box = _rotated_box(tw, th, rotation)
+                c.setFillColorRGB(*rgb)
+                c.setFont(font, size)
+                for cx, cy in _stamp_centres(tile, position, (width, height), box):
+                    c.saveState()
+                    c.translate(cx, cy)
+                    c.rotate(rotation)
+                    c.drawCentredString(0, -th / 2, text)
+                    c.restoreState()
+                    stamps += 1
+            c.showPage()
+        c.save()
+
+        with Pdf.open(overlay_path) as overlay:
+            for n, index in enumerate(selected):
+                if n % 50 == 0:
+                    ctx.check_cancelled()
+                    ctx.progress(n * 60 / len(selected), f"Watermarking page {index + 1}")
+                w, h = page_sizes[n]
+                stamp = overlay.pages[sizes[(round(w, 2), round(h, 2))]]
+                if layer == "over":
+                    pdf.pages[index].add_overlay(stamp, None)
+                else:
+                    pdf.pages[index].add_underlay(stamp, None)
+        save_pdf(pdf, tmp, ctx, start=65, keep_encryption=True)
+        total = len(pdf.pages)
+
+    ctx.check_cancelled()
+    final = deliver_pdf(tmp, params, source, "watermark", protected=[source])
+    return ToolResult(
+        [final],
+        {
+            "pages": total,
+            "watermarked": len(selected),
+            "kind": kind,
+            "layer": layer,
             "bytes": final.stat().st_size,
         },
     )

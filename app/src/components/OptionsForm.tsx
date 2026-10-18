@@ -1,7 +1,10 @@
-import { Eye, EyeOff } from "lucide-react";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { Eye, EyeOff, ImageIcon, X } from "lucide-react";
 import { useState } from "react";
 import type { z } from "zod";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isTauri } from "@/engine/client";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -12,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { passwordStrength } from "@/lib/passwordStrength";
-import { cn } from "@/lib/utils";
+import { cn, fileName } from "@/lib/utils";
 import {
   confirmError,
   describeOptions,
@@ -127,6 +130,52 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
         </div>
         {help}
       </fieldset>
+    );
+  }
+
+  if (field.kind === "file" && field.meta.file) {
+    const path = typeof value === "string" ? value : "";
+    const spec = field.meta.file;
+    const choose = async () => {
+      if (!isTauri()) return;
+      const picked = await openDialog({
+        multiple: false,
+        filters: [{ name: spec.name, extensions: [...spec.extensions] }],
+      });
+      if (typeof picked === "string") onChange(picked);
+    };
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={id}>{field.meta.label}</Label>
+        <div className="flex items-center gap-2 rounded-md border bg-surface-2/60 px-3 py-2">
+          <ImageIcon className="size-4 shrink-0 text-text-muted" aria-hidden />
+          <span className="flex-1 truncate text-sm" title={path || undefined}>
+            {path ? fileName(path) : "No file chosen"}
+          </span>
+          {path && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-6"
+              aria-label={`Clear ${field.meta.label}`}
+              onClick={() => onChange("")}
+              disabled={disabled}
+            >
+              <X />
+            </Button>
+          )}
+        </div>
+        <Button
+          id={id}
+          size="sm"
+          variant="secondary"
+          onClick={() => void choose()}
+          disabled={disabled}
+        >
+          Choose…
+        </Button>
+        {help}
+      </div>
     );
   }
 

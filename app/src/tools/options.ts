@@ -20,6 +20,8 @@ export interface FieldMeta {
   grid?: boolean;
   /** Text option holding a #RRGGBB colour. */
   color?: boolean;
+  /** Text option holding a file path chosen with the file dialog. */
+  file?: { name: string; extensions: readonly string[] };
   /** Page-range text bound to the thumbnail grid; empty means "all pages" when set. */
   pages?: { emptyMeansAll: boolean };
   /** Only show this field while another option has one of these values. */
@@ -109,7 +111,8 @@ export const opt = {
   },
 };
 
-export type FieldKind = "boolean" | "enum" | "number" | "string" | "pages" | "password" | "color";
+export type FieldKind =
+  "boolean" | "enum" | "number" | "string" | "pages" | "password" | "color" | "file";
 
 export interface FieldDescriptor {
   key: string;
@@ -160,7 +163,9 @@ export function describeOptions(schema: z.AnyZodObject): FieldDescriptor[] {
         ? "password"
         : meta.color
           ? "color"
-          : "string";
+          : meta.file
+            ? "file"
+            : "string";
     return { key, kind, meta, defaultValue };
   });
 }

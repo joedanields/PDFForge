@@ -458,6 +458,58 @@ export const pageNumberOptions = z.object({
   color: opt.color("Color", "#000000"),
 });
 
+export const watermarkOptions = z.object({
+  kind: opt.choice(
+    "Watermark",
+    [
+      { value: "text", label: "Text" },
+      { value: "image", label: "Image" },
+    ],
+    "text",
+    undefined,
+    { segmented: true },
+  ),
+  text: opt.text("Text", "CONFIDENTIAL", undefined, {
+    showWhen: { key: "kind", values: ["text"] },
+  }),
+  font: opt.choice("Font", FONT_CHOICES, "helvetica", undefined, {
+    showWhen: { key: "kind", values: ["text"] },
+  }),
+  bold: opt.bool("Bold", true, undefined, { showWhen: { key: "kind", values: ["text"] } }),
+  size: opt.int("Size", 6, 200, 48, undefined, { showWhen: { key: "kind", values: ["text"] } }),
+  color: opt.color("Color", "#808080", undefined, {
+    showWhen: { key: "kind", values: ["text"] },
+  }),
+  image: opt.text("Image", "", "PNG with transparency works best.", {
+    showWhen: { key: "kind", values: ["image"] },
+    file: {
+      name: "Images",
+      extensions: ["png", "jpg", "jpeg", "webp", "bmp", "gif", "tif", "tiff"],
+    },
+  }),
+  scale: opt.int("Width (% of the page)", 5, 100, 40, undefined, {
+    showWhen: { key: "kind", values: ["image"] },
+  }),
+  opacity: opt.int("Opacity (%)", 5, 100, 30),
+  rotation: opt.int("Rotation (degrees)", -180, 180, 45),
+  tile: opt.bool("Repeat across the page", false),
+  position: opt.choice("Position", POSITIONS, "middle-center", undefined, {
+    grid: true,
+    showWhen: { key: "tile", values: ["false"] },
+  }),
+  layer: opt.choice(
+    "Layer",
+    [
+      { value: "over", label: "Over content" },
+      { value: "under", label: "Under content" },
+    ],
+    "over",
+    "“Under” can be hidden by pages that have a solid background (such as scans).",
+    { segmented: true },
+  ),
+  pages: opt.pages("Pages", "Leave empty to watermark every page.", true),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -908,18 +960,51 @@ export const TOOLS: readonly ToolDef[] = [
         ? `Numbered ${s.numbered} ${s.numbered === 1 ? "page" : "pages"} (${String(s.first)}–${String(s.last)})`
         : null,
   },
-  soon({
+  {
     id: "watermark",
     ref: "E3",
     name: "Add Watermark",
     description: "Stamp text or an image over or under your pages.",
     category: "edit",
     icon: Stamp,
-    accepts: manyPdfs,
+    accepts: onePdf,
+    optionsSchema: watermarkOptions,
+    status: "available",
     priority: "must",
     phase: 1,
-    keywords: ["stamp", "confidential"],
-  }),
+    engineMethod: "watermark",
+    actionLabel: "Add watermark",
+    keywords: ["stamp", "confidential", "draft", "logo", "copy"],
+    check: (o) => {
+      if (o.kind === "text" && !(typeof o.text === "string" && o.text.trim())) {
+        return "Enter the watermark text.";
+      }
+      if (o.kind === "image" && !(typeof o.image === "string" && o.image)) {
+        return "Choose an image for the watermark.";
+      }
+      return null;
+    },
+    toEngine: (o) => {
+      const common = {
+        kind: o.kind,
+        opacity: Number(o.opacity) / 100,
+        rotation: o.rotation,
+        tile: o.tile,
+        position: o.position,
+        layer: o.layer,
+        pages: typeof o.pages === "string" && o.pages.trim() ? o.pages : "all",
+      };
+      return o.kind === "image"
+        ? { ...common, image: o.image, scale: Number(o.scale) / 100 }
+        : { ...common, text: o.text, font: o.font, bold: o.bold, size: o.size, color: o.color };
+    },
+    summary: (s) =>
+      typeof s.watermarked === "number"
+        ? `Watermarked ${s.watermarked} ${s.watermarked === 1 ? "page" : "pages"}${
+            s.layer === "under" ? " (under the content)" : ""
+          }`
+        : null,
+  },
   soon({
     id: "crop",
     ref: "E4",

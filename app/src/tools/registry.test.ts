@@ -32,6 +32,7 @@ const IMPLEMENTED = [
   "organize",
   "rotate",
   "page-numbers",
+  "watermark",
   "image-to-pdf",
   "pdf-to-image",
   "protect",

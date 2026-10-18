@@ -20,4 +20,5 @@ TOOLS: Mapping[str, ToolFn] = {
     "rotate": organize.rotate,
     "split": organize.split,
     "unlock": security.unlock,
+    "watermark": edit.watermark,
 }
