@@ -25,6 +25,7 @@ from tests.fixtures import (
     make_image,
     make_landscape_pdf,
     make_not_pdf,
+    make_restricted_pdf,
     make_text_pdf,
     page_label,
 )
@@ -456,3 +457,32 @@ def test_form_fields_survive_merge(tmp_path: Path, ctx: RecordingContext) -> Non
         fields = pdf.Root.AcroForm.Fields
         assert len(fields) == 2
         assert len({str(f.T) for f in fields}) == 2
+
+
+# --- protected inputs (decision: output unencrypted, UI warns) ---------------------------------
+
+
+def test_protected_inputs_are_counted_and_output_is_unprotected(
+    tmp_path: Path, ctx: RecordingContext
+) -> None:
+    plain = make_text_pdf(tmp_path / "a.pdf", 1)
+    locked = make_encrypted_pdf(tmp_path / "locked.pdf", 1, "s3cret")
+    restricted = make_restricted_pdf(tmp_path / "restricted.pdf", 1)
+    result = merge(
+        {
+            "inputs": [str(plain), str(locked), str(restricted)],
+            "passwords": {str(locked): "s3cret"},
+        },
+        ctx,
+    )
+    assert result.stats["protected_inputs"] == 2
+    with pikepdf.open(result.outputs[0]) as pdf:
+        assert not pdf.is_encrypted
+        assert len(pdf.pages) == 3
+
+
+def test_unprotected_inputs_report_zero(tmp_path: Path, ctx: RecordingContext) -> None:
+    a = make_text_pdf(tmp_path / "a.pdf", 1)
+    b = make_image(tmp_path / "b.png")
+    result = merge({"inputs": [str(a), str(b)]}, ctx)
+    assert result.stats["protected_inputs"] == 0

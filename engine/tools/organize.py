@@ -68,6 +68,7 @@ def merge(params: dict[str, Any], ctx: JobContext) -> ToolResult:
     tmp_out = ctx.temp_dir / "merged.pdf"
     out = Pdf.new()
     sources: list[_Source] = []
+    protected = 0
     try:
         for i, path in enumerate(inputs):
             ctx.check_cancelled()
@@ -81,6 +82,7 @@ def merge(params: dict[str, Any], ctx: JobContext) -> ToolResult:
                 lookup=_dest_lookup(pdf),
             )
             sources.append(source)
+            protected += int(pdf.is_encrypted)  # password or permission restrictions
             out.add_pages_from(pdf)  # keeps form fields and named destinations
             _remap_links(source, out)
 
@@ -108,7 +110,14 @@ def merge(params: dict[str, Any], ctx: JobContext) -> ToolResult:
     final = commit(tmp_out, desired, protected=inputs)
     ctx.progress(100, "Done")
     return ToolResult(
-        outputs=[final], stats={"pages": page_count, "bytes": final.stat().st_size, "files": total}
+        outputs=[final],
+        stats={
+            "pages": page_count,
+            "bytes": final.stat().st_size,
+            "files": total,
+            # The merged file is never encrypted; the UI warns when inputs were (decision 2026-10).
+            "protected_inputs": protected,
+        },
     )
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import socket
+import time
 from pathlib import Path
 
 import pytest
@@ -197,9 +198,56 @@ def test_eof_shuts_down_cleanly(engine: EngineProcess, temp_root: Path) -> None:
     assert leftovers == []
 
 
-def test_crash_hook_exits_nonzero(engine: EngineProcess) -> None:
-    engine.send({"id": "x1", "method": "echo", "params": {"crash": True}})
-    assert engine.proc.wait(timeout=10) == 70
+def test_engine_crash_hook_exits_nonzero(engine: EngineProcess) -> None:
+    engine.send({"id": "x1", "method": "echo", "params": {"crash": "engine"}})
+    assert engine.proc.wait(timeout=15) != 0
+
+
+# --- worker isolation (docs/05 S6) -------------------------------------------------------------
+
+
+def test_worker_crash_fails_job_but_engine_survives(engine: EngineProcess) -> None:
+    engine.send({"id": "w1", "method": "echo", "params": {"crash": True}})
+    final = engine.read_until_final("w1")[-1]
+    assert (final["event"], final["code"]) == ("error", "INTERNAL")
+    assert "stopped unexpectedly" in final["message"]
+    engine.send({"id": "w2", "method": "echo", "params": {"steps": 1, "delay_ms": 1}})
+    assert engine.read_until_final("w2")[-1]["event"] == "done"
+
+
+def test_memory_cap_stops_runaway_job(engine: EngineProcess) -> None:
+    # The fixture caps workers at 512 MB.
+    engine.send({"id": "m1", "method": "echo", "params": {"steps": 0, "allocate_mb": 1024}})
+    final = engine.read_until_final("m1", timeout=60)[-1]
+    assert (final["event"], final["code"]) == ("error", "INTERNAL")
+    assert "512 MB" in final["message"]
+    engine.send({"id": "m2", "method": "echo", "params": {"steps": 0, "allocate_mb": 100}})
+    assert engine.read_until_final("m2", timeout=60)[-1]["event"] == "done"
+
+
+def test_memory_cap_per_request_override(engine: EngineProcess) -> None:
+    params = {"steps": 0, "allocate_mb": 300, "memory_limit_mb": 200}
+    engine.send({"id": "m3", "method": "echo", "params": params})
+    final = engine.read_until_final("m3", timeout=60)[-1]
+    assert final["code"] == "INTERNAL"
+    assert "200 MB" in final["message"]
+
+
+def test_job_ignoring_cancel_is_killed(engine: EngineProcess, temp_root: Path) -> None:
+    engine.send({"id": "k1", "method": "echo", "params": {"steps": 0, "block_s": 60}})
+    time.sleep(1.5)  # let the worker start and block
+    started = time.monotonic()
+    engine.send({"id": "k1", "method": "cancel"})
+    final = engine.read_until_final("k1", timeout=20)[-1]
+    assert final["code"] == "CANCELLED"
+    assert time.monotonic() - started < 10  # grace is 1 s in tests
+    assert not (temp_root / "k1").exists()
+
+
+def test_timeout_kills_blocked_job(engine: EngineProcess) -> None:
+    params = {"steps": 0, "block_s": 60, "timeout_s": 1}
+    engine.send({"id": "k2", "method": "echo", "params": params})
+    assert engine.read_until_final("k2", timeout=30)[-1]["code"] == "TIMEOUT"
 
 
 def test_startup_sweeps_stale_temp(temp_root: Path) -> None:

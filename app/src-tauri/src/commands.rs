@@ -132,7 +132,7 @@ fn ensure_known_output(db: &Db, path: &str) -> CmdResult<()> {
 #[tauri::command]
 pub fn open_output(db: State<'_, Arc<Db>>, path: String) -> CmdResult<()> {
     ensure_known_output(&db, &path)?;
-    if !Path::new(&path).is_file() {
+    if !Path::new(&path).exists() {
         return Err("The file no longer exists.".into());
     }
     tauri_plugin_opener::open_path(&path, None::<&str>).map_err(|e| e.to_string())
@@ -141,7 +141,7 @@ pub fn open_output(db: State<'_, Arc<Db>>, path: String) -> CmdResult<()> {
 #[tauri::command]
 pub fn reveal_output(db: State<'_, Arc<Db>>, path: String) -> CmdResult<()> {
     ensure_known_output(&db, &path)?;
-    if !Path::new(&path).is_file() {
+    if !Path::new(&path).exists() {
         return Err("The file no longer exists.".into());
     }
     tauri_plugin_opener::reveal_item_in_dir(&path).map_err(|e| e.to_string())

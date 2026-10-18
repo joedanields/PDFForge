@@ -86,6 +86,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: app/src-tauri
+      # NSIS toolset + WebView2 bootstrapper that `tauri build` would otherwise download with a
+      # short timeout. Verified on every run (hit or miss) by fetch-tauri-tools.ps1.
+      - name: Cache Tauri bundler tools
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\tauri
+          key: tauri-tools-${{ runner.os }}-${{ hashFiles('scripts/fetch-tauri-tools.ps1') }}
+      - name: Fetch and verify Tauri bundler tools
+        shell: pwsh
+        run: ./scripts/fetch-tauri-tools.ps1
       - name: Build installer
         shell: pwsh
         run: ./scripts/build-all.ps1

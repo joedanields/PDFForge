@@ -119,7 +119,7 @@ fn supervisor_handshake_jobs_crash_restart_shutdown() {
 
         // 3. crash while "long" is in flight: it must be failed, and the engine must come back
         engine
-            .submit(meta("boom", "echo"), json!({"crash": true}))
+            .submit(meta("boom", "echo"), json!({"crash": "engine"}))
             .await
             .expect("submit crash");
         wait_for("long failed", Duration::from_secs(15), || {

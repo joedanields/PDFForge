@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import io
 import logging
+import multiprocessing
 import os
 import sys
 import threading
+from pathlib import Path
 from typing import Any, TextIO
 
 from jobs import JobManager
@@ -79,22 +81,47 @@ def _configure_logging() -> None:
     )
 
 
-def main() -> int:
-    # Take a private handle on the real stdout, then point sys.stdout at stderr so that a
-    # library print() can never corrupt the protocol stream.
-    protocol_out = io.TextIOWrapper(
-        os.fdopen(os.dup(sys.stdout.fileno()), "wb"), encoding="utf-8", newline="\n"
-    )
+def _take_protocol_streams() -> tuple[TextIO, TextIO]:
+    """Move the protocol pipes onto private descriptors.
+
+    stdout: library print()s must never corrupt the protocol, so sys.stdout and fd 1 now point at
+    stderr. stdin: on Windows, CreateProcess (used to start job workers) touches the process's
+    standard handles and blocks behind a pending synchronous read on the stdin pipe, so worker
+    start-up would hang until the next request arrived. fd 0 and the Win32 std handles are
+    therefore redirected to NUL / stderr, and the protocol is read from a private duplicate.
+    """
+    in_fd = os.dup(0)
+    out_fd = os.dup(1)
+    devnull = os.open(os.devnull, os.O_RDONLY)
+    os.dup2(devnull, 0)
+    os.dup2(2, 1)
+    os.close(devnull)
+    if sys.platform == "win32":
+        import ctypes
+        import msvcrt
+
+        k32 = ctypes.WinDLL("kernel32")
+        k32.SetStdHandle(-10, msvcrt.get_osfhandle(0))  # STD_INPUT_HANDLE  -> NUL
+        k32.SetStdHandle(-11, msvcrt.get_osfhandle(2))  # STD_OUTPUT_HANDLE -> stderr
+    sys.stdin = Path(os.devnull).open(encoding="utf-8")  # noqa: SIM115 - process lifetime
     sys.stdout = sys.stderr
+    protocol_out = io.TextIOWrapper(os.fdopen(out_fd, "wb"), encoding="utf-8", newline="\n")
     # utf-8-sig: tolerate a BOM before the first line (e.g. Windows PowerShell pipes).
-    in_stream = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8-sig", errors="replace")
+    protocol_in = io.TextIOWrapper(os.fdopen(in_fd, "rb"), encoding="utf-8-sig", errors="replace")
+    return protocol_in, protocol_out
+
+
+def main() -> int:
+    in_stream, protocol_out = _take_protocol_streams()
 
     _configure_logging()
+    os.environ["PDFFORGE_ENGINE_PID"] = str(os.getpid())  # inherited by job workers
     netguard.install()
     sweep_temp_root()
 
     emit = LineWriter(protocol_out)
-    manager = JobManager(emit, TOOLS, max_workers=min(4, os.cpu_count() or 2))
+    # Each job runs in its own memory-capped worker process (docs/05 S6).
+    manager = JobManager(emit, TOOLS, max_workers=min(4, os.cpu_count() or 2), isolate=True)
     log.info("engine ready (pid %d)", os.getpid())
     try:
         serve(in_stream, emit, manager)
@@ -107,4 +134,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()  # worker processes of the frozen engine.exe
     sys.exit(main())

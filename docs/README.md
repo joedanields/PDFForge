@@ -18,7 +18,7 @@
 
 ## One-paragraph summary
 
-A Tauri 2 desktop app (React + TypeScript UI) talks to a bundled Python "engine" process that performs PDF operations using open-source libraries (pikepdf/qpdf, pypdf, pdfplumber, pdf2docx, Pillow, OCRmyPDF/Tesseract) plus bundled LibreOffice (Office → PDF) and Ghostscript (compression, PDF/A). Everything runs locally — no uploads, no account. Output is a signed Windows installer (`PDFForge-Setup-x.y.z.exe`) built with the Tauri bundler (NSIS).
+A Tauri 2 desktop app (React + TypeScript UI) talks to a bundled Python "engine" process that performs PDF operations using open-source libraries (pikepdf/qpdf, pypdf, pypdfium2, pdfplumber, Pillow, OCRmyPDF/Tesseract) plus bundled LibreOffice (Office → PDF). The project is AGPL-free (no Ghostscript, PyMuPDF or pdf2docx; see 09 §3). Everything runs locally — no uploads, no account. Output is a signed Windows installer (`PDFForge-Setup-x.y.z.exe`) built with the Tauri bundler (NSIS).
 
 ## Important note on branding
 

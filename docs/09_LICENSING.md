@@ -41,7 +41,14 @@
    - PDF/A → skip or implement with veraPDF validation + pikepdf.
    - PDF → Word → write your own converter on pdfplumber + python-docx instead of pdf2docx.
 
-Record the decision here before Phase 1.
+**Decision (recorded before Phase 1): option 3 — stay AGPL-free.**
+- Not used or bundled: Ghostscript, MuPDF / PyMuPDF, pdf2docx (and anything that pulls them in).
+- Compress (B1): pikepdf + Pillow — downsample images to the level's DPI, re-encode JPEG,
+  optional grayscale, strip metadata, remove unused objects.
+- PDF/A (D5): pikepdf + veraPDF validation, or skipped if that is not reliable enough.
+- PDF → Word (D2): own converter on pdfplumber + python-docx.
+- OCR (B3) and camelot: use only code paths that do not require Ghostscript (re-check in Phase 2).
+- New dependencies are checked against this rule before they are added.
 
 ## 4. Obligations checklist
 - [ ] Ship `THIRD_PARTY_NOTICES.txt` with all licenses; show it in Settings → About.

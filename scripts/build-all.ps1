@@ -74,6 +74,8 @@ if (-not (Test-Path (Join-Path $appDir 'src-tauri\resources\engine\engine.exe'))
 }
 
 # --- 3. app + installer -------------------------------------------------------------------
+# NSIS + WebView2 bootstrapper, verified, so the bundler never hits its download timeout.
+& (Join-Path $PSScriptRoot 'fetch-tauri-tools.ps1')
 Push-Location $appDir
 try {
     Write-Host '==> Installing UI dependencies' -ForegroundColor Cyan

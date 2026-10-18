@@ -30,7 +30,13 @@ def ctx(tmp_path: Path) -> RecordingContext:
 
 @pytest.fixture
 def engine(temp_root: Path) -> Iterator[EngineProcess]:
-    env = {**os.environ, "PDFFORGE_TEMP_ROOT": str(temp_root), "PYTHONIOENCODING": "utf-8"}
+    env = {
+        **os.environ,
+        "PDFFORGE_TEMP_ROOT": str(temp_root),
+        "PYTHONIOENCODING": "utf-8",
+        "PDFFORGE_CANCEL_GRACE_S": "1",
+        "PDFFORGE_JOB_MEMORY_MB": "512",
+    }
     proc = EngineProcess(env)
     yield proc
     if proc.proc.poll() is None:

@@ -42,7 +42,7 @@ finally {
 $engineExe = Join-Path $distDir 'engine.exe'
 if (-not (Test-Path $engineExe)) { throw "PyInstaller did not produce $engineExe" }
 
-Write-Host '==> Smoke-testing frozen engine (hello handshake)' -ForegroundColor Cyan
+Write-Host '==> Smoke-testing frozen engine (hello handshake + Echo job in a worker process)' -ForegroundColor Cyan
 $psi = New-Object System.Diagnostics.ProcessStartInfo
 $psi.FileName = $engineExe
 $psi.WorkingDirectory = $distDir
@@ -56,14 +56,32 @@ $stderrTask = $proc.StandardError.ReadToEndAsync()
 $proc.StandardInput.WriteLine('{"id":"build-check","method":"hello"}')
 $proc.StandardInput.Flush()
 $line = $proc.StandardOutput.ReadLine()
-$proc.StandardInput.Close()
-if (-not $proc.WaitForExit(15000)) { $proc.Kill(); throw 'Frozen engine did not exit after stdin closed' }
 $hello = $line | ConvertFrom-Json
 if ($hello.event -ne 'hello' -or $hello.protocol_version -ne 1) {
+    $proc.Kill()
     Write-Host $stderrTask.Result
     throw "Unexpected handshake from frozen engine: $line"
 }
 Write-Host "    engine $($hello.engine_version), protocol $($hello.protocol_version), methods: $($hello.methods -join ', ')"
+# A real job: proves the frozen exe can start memory-capped worker processes (freeze_support).
+$proc.StandardInput.WriteLine('{"id":"build-echo","method":"echo","params":{"steps":2,"delay_ms":1}}')
+$proc.StandardInput.Flush()
+$deadline = (Get-Date).AddSeconds(60)
+$final = $null
+while (-not $final -and (Get-Date) -lt $deadline) {
+    $read = $proc.StandardOutput.ReadLineAsync()
+    if (-not $read.Wait(60000)) { break }
+    if ($null -eq $read.Result) { break }
+    $event = $read.Result | ConvertFrom-Json
+    if ($event.event -in @('done', 'error')) { $final = $event }
+}
+$proc.StandardInput.Close()
+if (-not $proc.WaitForExit(15000)) { $proc.Kill(); throw 'Frozen engine did not exit after stdin closed' }
+if (-not $final -or $final.event -ne 'done') {
+    Write-Host $stderrTask.Result
+    throw "Frozen engine could not run a job in a worker process: $($final | ConvertTo-Json -Compress)"
+}
+Write-Host "    echo job in worker process: done in $($final.stats.ms) ms"
 
 if ($env:PDFFORGE_SIGN_THUMBPRINT) {
     $timestamp = if ($env:PDFFORGE_SIGN_TIMESTAMP_URL) { $env:PDFFORGE_SIGN_TIMESTAMP_URL } else { 'http://timestamp.digicert.com' }

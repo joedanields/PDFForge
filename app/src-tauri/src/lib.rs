@@ -72,8 +72,18 @@ impl Sink for AppSink {
         }
         if done && !outputs.is_empty() {
             let now = now_ms();
-            for path in &outputs {
-                let bytes = std::fs::metadata(path).ok().map(|m| m.len() as i64);
+            // Multi-file results (split, export images...) live in one new folder: remember the
+            // folder, not every file in it.
+            let folder = final_event.pointer("/stats/folder").and_then(Value::as_str);
+            let recents: Vec<&str> = match folder {
+                Some(folder) => vec![folder],
+                None => outputs.iter().map(String::as_str).collect(),
+            };
+            for path in recents {
+                let bytes = std::fs::metadata(path)
+                    .ok()
+                    .filter(|m| m.is_file())
+                    .map(|m| m.len() as i64);
                 if let Err(err) = self.db.add_recent(path, &meta.method, &meta.id, now, bytes) {
                     log::error!("could not record recent output: {err}");
                 }

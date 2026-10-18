@@ -55,6 +55,15 @@ export const en = {
   "result.reveal": "Show in folder",
   "result.startOver": "Start over",
   "result.copyDetails": "Copy details",
+  "result.openFolder": "Open folder",
+  "result.filesInFolder": "{count} files in “{folder}”",
+  "result.andMore": "and {count} more",
+  "result.saved": "{percent}% smaller",
+  "result.keptOriginal":
+    "This file is already well optimized — compressing it would not make it smaller, so the original ({size}) was kept and no new file was created.",
+  "result.protectedWarning":
+    "Some files were password-protected. The merged file has no protection.",
+  "result.protect": "Protect this file",
   "settings.title": "Settings",
   "settings.general": "General",
   "settings.theme": "Theme",

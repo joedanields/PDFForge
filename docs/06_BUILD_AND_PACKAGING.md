@@ -20,7 +20,6 @@ pdfforge/
 │   └── engine.spec      # PyInstaller spec
 ├── vendor/              # NOT committed; fetched by script
 │   ├── libreoffice/     # portable LibreOffice (program/ only, trimmed)
-│   ├── ghostscript/
 │   └── tesseract/       # + tessdata (eng by default)
 ├── scripts/
 │   ├── fetch-vendor.ps1 # downloads + checksums vendor binaries
@@ -38,7 +37,7 @@ ocrmypdf, pyhanko, camelot-py (optional)
 ```
 
 ## 4. Build steps
-1. `scripts/fetch-vendor.ps1` — download LibreOffice, Ghostscript, Tesseract; verify SHA-256; trim unneeded LibreOffice components (help, extensions, Java) to shrink size.
+1. `scripts/fetch-vendor.ps1` — download LibreOffice and Tesseract (no Ghostscript, 09 §3); verify SHA-256; trim unneeded LibreOffice components (help, extensions, Java) to shrink size.
 2. `scripts/build-engine.ps1` — freezes the engine with PyInstaller in **onedir** mode
    (faster start than onefile), smoke-tests it with a `hello` handshake, and stages the whole
    folder for bundling:
@@ -72,8 +71,7 @@ ocrmypdf, pyhanko, camelot-py (optional)
      }
    }
    ```
-   Phase 0: the `vendor/` folders (LibreOffice, Tesseract; Ghostscript pending the AGPL decision
-   in 09 §3) are added to `resources` in Phase 2. The `.pdf` file association is added together
+   Phase 0: the `vendor/` folders (LibreOffice, Tesseract) are added to `resources` in Phase 2. The `.pdf` file association is added together
    with the built-in viewer (Phase 3), so "Open with PDFForge" never lands on a dead end.
 4. `cd app && pnpm install --frozen-lockfile && pnpm tauri build --bundles nsis`
 5. Output: `app/src-tauri/target/release/bundle/nsis/PDFForge_x.y.z_x64-setup.exe`
@@ -101,3 +99,12 @@ ocrmypdf, pyhanko, camelot-py (optional)
 
 ## 8. CI (GitHub Actions, `windows-latest`)
 - Jobs: lint → engine unit tests → UI unit tests → fetch vendor (cached) → build engine → tauri build → E2E smoke on built app → upload installer artifact.
+- Tauri bundler tools: `tauri build` downloads the NSIS toolset and the WebView2 bootstrapper
+  into `%LOCALAPPDATA%\tauri` with a short timeout, which fails on slow links
+  (`failed to bundle project: timeout: global`). CI caches that folder (`actions/cache`, key =
+  hash of `scripts/fetch-tauri-tools.ps1`) and runs `scripts/fetch-tauri-tools.ps1` on every
+  build, hit or miss. The script downloads missing files with retries and verifies them: the
+  NSIS zip, `NSIS.exe` and `nsis_tauri_utils.dll` against the SHA-1 values pinned by
+  tauri-bundler, and the bootstrapper by its Microsoft Authenticode signature (Microsoft updates
+  that file, so a fixed hash would go stale). `build-all.ps1` runs the same script locally.
+  When Tauri is upgraded, update the pinned NSIS version and hashes in the script.

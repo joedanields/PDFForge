@@ -10,7 +10,7 @@ Estimates assume 1–2 developers working full time.
 
 ## Phase 1 — MVP (4–5 weeks)
 - Merge, Split, Remove pages, Extract pages, Rotate, Organize (thumbnail grid).
-- Compress (Ghostscript), Image → PDF, PDF → JPG.
+- Compress (pikepdf + Pillow), Image → PDF, PDF → JPG.
 - Protect, Unlock, Add page numbers, Add watermark.
 - NSIS installer, code signing.
 - **Exit:** 13 tools, installer tested on Win 10/11 clean VMs.
@@ -40,6 +40,6 @@ Estimates assume 1–2 developers working full time.
 |------|-----------|
 | Installer too big (LibreOffice) | Trim LO; Lite installer + on-demand download |
 | PDF → Word fidelity complaints | Set expectations in UI; offer "OCR mode" for scans |
-| AGPL (Ghostscript/PyMuPDF) obligations | Use alternatives or comply / buy commercial license (09) |
+| AGPL (Ghostscript/PyMuPDF) obligations | Decided: AGPL-free alternatives only (09 §3) |
 | WebView2 missing on old Win 10 | Embed bootstrapper |
 | SmartScreen warnings | Code-signing certificate early |

@@ -15,7 +15,7 @@
 | Conversion | pdf2docx, python-pptx, openpyxl, img2pdf, Pillow, ReportLab | |
 | OCR | OCRmyPDF + Tesseract 5 (bundled) | |
 | Office → PDF | **LibreOffice** portable, headless (`soffice --headless --convert-to pdf`) | No MS Office needed |
-| Compression / PDF/A | **Ghostscript** (bundled `gswin64c.exe`) — check AGPL implications (09) | |
+| Compression / PDF/A | **pikepdf + Pillow** image recompression; PDF/A via pikepdf + veraPDF | AGPL-free by decision (09 §3): no Ghostscript, MuPDF/PyMuPDF or pdf2docx |
 | Signing (crypto) | pyHanko | |
 | Local storage | Settings in `settings.json`; history and recent outputs in SQLite `app.db` via Rust `rusqlite` (see §6) | |
 
@@ -37,13 +37,21 @@
 ┌──────────▼───────────────────┐
 │  engine.exe (Python sidecar) │  job queue, runs tools, progress events
 │   ├─ libreoffice/ (soffice)  │  spawned per Office job
-│   ├─ ghostscript/ (gs)       │
 │   └─ tesseract/              │
 └──────────────────────────────┘
 ```
 
 - One long-lived engine process started at app launch (lazy-start acceptable).
-- Jobs run in a worker pool inside the engine (process pool for CPU-heavy tasks: OCR, compress, render).
+- Each job runs in its own worker process (multiprocessing `spawn`), at most 4 at a time. On
+  Windows the worker is placed in a Job Object capped at 2 GB of committed memory (05 S6);
+  allocations beyond the cap fail with `INTERNAL` "This job needed more than N MB of memory"
+  instead of exhausting the PC. The cap is set by `PDFFORGE_JOB_MEMORY_MB` or per request
+  (`memory_limit_mb`, 128–65536). Closing the Job Object kills the worker, so workers never
+  outlive the engine. A worker that ignores Cancel or its timeout is killed after a 5 s grace
+  period (`PDFFORGE_CANCEL_GRACE_S`).
+- The engine reads the protocol from private copies of its stdin/stdout handles and points the
+  process's standard handles at NUL/stderr; otherwise starting a worker deadlocks behind the
+  pending stdin read on Windows.
 - Rust watchdog restarts the engine if it crashes; in-flight job reported as failed.
 
 ## 3. Engine IPC protocol (JSON lines)
@@ -84,7 +92,8 @@ Rules (protocol version 1):
   an unknown method gets `UNSUPPORTED`. Neither stops the engine.
 - `cancel` for an unknown or finished id is ignored (no reply). Cancelled jobs answer
   `CANCELLED` and leave no output.
-- Optional `params.timeout_s` (default 900, max 21600) ends a job with `TIMEOUT`.
+- Optional `params.timeout_s` (default 900, max 21600) ends a job with `TIMEOUT`; optional
+  `params.memory_limit_mb` overrides the per-job memory cap (§2).
 - Common params: `inputs` (paths), `options` (tool options), `passwords` (`{path: password}`,
   never logged or stored), `output` (explicit file) or `output_dir` (folder; default = folder of
   the first input). The engine never overwrites: it picks `name.pdf`, `name (1).pdf`, ... and
@@ -93,7 +102,9 @@ Rules (protocol version 1):
   a crash: the app reports in-flight jobs as `INTERNAL` errors and restarts the engine with
   backoff (1 s doubling to 30 s). After 5 consecutive crashes that each happen within a minute
   of starting, it stops retrying and shows "engine failed" with a Retry button.
-- `echo` is a diagnostic tool (`message`, `steps`, `delay_ms`) used by the engine self-test.
+- `echo` is a diagnostic tool (`message`, `steps`, `delay_ms`) used by the engine self-test;
+  test-only hooks: `fail`, `crash` (`true` = worker, `"engine"` = whole engine),
+  `allocate_mb`, `block_s`.
 
 ## 4. Engine module layout
 
@@ -111,7 +122,6 @@ engine/
 │   └── compare.py
 ├── adapters/
 │   ├── libreoffice.py     # temp profile dir, timeout, kill on cancel
-│   ├── ghostscript.py
 │   └── tesseract.py
 ├── utils/ (paths, naming, temp files, page ranges parser, validation)
 └── tests/

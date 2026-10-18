@@ -183,3 +183,24 @@ def make_form_pdf(path: Path, field_name: str = "name") -> Path:
     c.showPage()
     c.save()
     return path
+
+
+def make_restricted_pdf(path: Path, pages: int, owner_password: str = "owner-secret") -> Path:
+    """Opens without a password but carries owner restrictions (no printing, copying, editing)."""
+    plain = path.with_name(f"{path.stem}.plain.pdf")
+    make_text_pdf(plain, pages, path.stem)
+    restrictions = pikepdf.Permissions(
+        extract=False,
+        modify_other=False,
+        modify_annotation=False,
+        print_lowres=False,
+        print_highres=False,
+        modify_assembly=False,
+        modify_form=False,
+    )
+    with pikepdf.open(plain) as pdf:
+        pdf.save(
+            path, encryption=pikepdf.Encryption(user="", owner=owner_password, allow=restrictions)
+        )
+    plain.unlink()
+    return path

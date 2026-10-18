@@ -1,7 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { ArrowLeft, CircleAlert, Copy, Info } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { DropZone } from "@/components/DropZone";
 import { FileList } from "@/components/FileList";
 import { OptionsForm } from "@/components/OptionsForm";
@@ -188,6 +188,21 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     window.addEventListener("pdfforge:test-add-files", onTestFiles);
     return () => window.removeEventListener("pdfforge:test-add-files", onTestFiles);
   }, [addPaths]);
+
+  // Files handed over by another tool (e.g. Merge result → "Protect this file").
+  const location = useLocation();
+  const navigate = useNavigate();
+  const preloaded = useRef(false);
+  useEffect(() => {
+    if (preloaded.current) return;
+    const state: unknown = location.state;
+    const preload: unknown =
+      state && typeof state === "object" && "preload" in state ? state.preload : null;
+    if (!Array.isArray(preload)) return;
+    preloaded.current = true;
+    void addPaths(preload.filter((p): p is string => typeof p === "string"));
+    navigate(location.pathname, { replace: true, state: null }); // don't re-add on refresh
+  }, [addPaths, location.pathname, location.state, navigate]);
 
   const selectFiles = useCallback(async () => {
     if (!isTauri()) return;

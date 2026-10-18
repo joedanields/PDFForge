@@ -132,7 +132,7 @@ impl Db {
         let rows = stmt.query_map([limit], |r| {
             let path: String = r.get(0)?;
             Ok(RecentOutput {
-                exists: Path::new(&path).is_file(),
+                exists: Path::new(&path).exists(), // file, or folder of a multi-file result
                 path,
                 tool: r.get(1)?,
                 created_at: r.get(2)?,

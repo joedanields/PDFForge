@@ -61,13 +61,15 @@ Engine column = suggested library (see 03_ARCHITECTURE.md).
   - *Extreme* — 72 dpi images, high JPEG compression.
   - *Recommended* (default) — 150 dpi.
   - *Low* — 300 dpi, minimal quality loss.
-  - *Custom* — DPI, JPEG quality, grayscale toggle, remove metadata, remove embedded fonts subset dupes.
+  - *Custom* — DPI, JPEG quality, grayscale toggle, remove metadata.
 - **Output:** shows original vs new size and % saved. If output is larger than input, keep the original and tell the user.
-- **Engine:** Ghostscript (`-dPDFSETTINGS`), fallback pikepdf + Pillow image recompression.
+- **Engine:** pikepdf + Pillow (AGPL-free, see 09 §3): downsample each image to the level's DPI
+  based on its displayed size, re-encode as JPEG, optional grayscale, strip metadata, remove
+  unused objects and recompress streams. Vector content and fonts are kept as they are.
 
 ### B2. Repair PDF — Should
 - Attempt to rebuild xref/trailer and recover pages from damaged files.
-- **Engine:** qpdf/pikepdf, fallback Ghostscript re-write.
+- **Engine:** qpdf/pikepdf, fallback pypdf re-write (no Ghostscript, see 09 §3).
 - Report: "Repaired / Partially recovered (N of M pages) / Could not repair".
 
 ### B3. OCR PDF — Should
@@ -102,7 +104,7 @@ Engine column = suggested library (see 03_ARCHITECTURE.md).
 | D2 | PDF → Word | DOCX | with OCR for scanned (Y/N) | pdf2docx | Must |
 | D3 | PDF → PowerPoint | PPTX | one slide per page (image + extracted text boxes) | python-pptx + pypdfium2 | Should |
 | D4 | PDF → Excel | XLSX | detect tables automatically / one sheet per page / one sheet total | pdfplumber or camelot + openpyxl | Should |
-| D5 | PDF → PDF/A | PDF/A-1b, 2b, 3b | conformance level | Ghostscript / OCRmyPDF | Should |
+| D5 | PDF → PDF/A | PDF/A-1b, 2b, 3b | conformance level | pikepdf + veraPDF validation (no Ghostscript, see 09 §3) | Should |
 | D6 | PDF → Text | TXT | keep layout (Y/N) | pdfplumber | Could |
 
 **Acceptance (D2):** text, paragraphs, basic tables and images preserved for digitally created PDFs; layout fidelity is "best effort" and must be stated in UI.
