@@ -33,6 +33,7 @@ const AVAILABLE = [
   "pdf-to-powerpoint",
   "pdf-to-excel",
   "pdf-to-text",
+  "text-to-pdf",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -657,6 +658,16 @@ if (section("frompdf")) {
   await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
   const text = await runAndWait("Extract text");
   expect(/annual( \(\d+\))?\.txt/.test(text), "text extracted to annual.txt");
+}
+
+if (section("text")) {
+  console.log("Text to PDF");
+  await go("#/tool/text-to-pdf");
+  await addFiles("notes.md");
+  await page.waitForFunction(() => document.querySelectorAll("main ol li").length === 1);
+  await page.getByRole("radio", { name: "Serif", exact: true }).click();
+  const text = await runAndWait("Convert to PDF");
+  expect(/notes( \(\d+\))?\.pdf/.test(text) && text.includes("1 page"), "Markdown → notes.pdf");
 }
 
 if (!only || only.has("echo") || echoOnly) {

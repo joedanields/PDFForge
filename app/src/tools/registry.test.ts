@@ -45,6 +45,7 @@ const IMPLEMENTED = [
   "pdf-to-powerpoint",
   "pdf-to-excel",
   "pdf-to-text",
+  "text-to-pdf",
 ];
 
 describe("tool registry contents", () => {

@@ -46,6 +46,9 @@ def main(out: Path) -> None:
     make_xlsx(out / "book.xlsx", columns=30)
     make_document_pdf(out / "annual.pdf", pages=2)
     make_scanned_text_pdf(out / "invoice-scan.pdf")
+    (out / "notes.md").write_text(
+        "# Meeting notes\n\n- **Budget** approved\n- Next review in *May*\n", encoding="utf-8"
+    )
     print(f"e2e inputs written to {out}")
 
 

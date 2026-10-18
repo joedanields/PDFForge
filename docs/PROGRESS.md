@@ -5,7 +5,7 @@
 ## Now
 
 - **Current phase:** Phase 2 — Conversions
-- **Working on:** 2.3 Text / Markdown → PDF
+- **Working on:** 2.4 Repair
 
 ## Phase 2 — Conversions
 
@@ -13,8 +13,8 @@
 |------|--------|-------|--------|-------|
 | 2.0 Vendor: LibreOffice + Tesseract fetch/verify/trim, helper runner | done | test_vendor (10) | bf15a1a | LibreOffice 26.2.6 (~490 MB), Tesseract 5.4.0 + eng/osd/tam/hin (~134 MB); D-012–D-015 |
 | 2.1 Word / PowerPoint / Excel → PDF (C2–C4) | done | test_office (17), smoke `office` | d38f7c3 | LibreOffice headless; 50-page DOCX well under 15 s; D-016, D-017 |
-| 2.2 PDF → Word / Excel / PowerPoint / Text (D2–D4, D6) | done | test_pdf_to_word (10), test_pdf_to_office (11), smoke `frompdf` | (this commit) | own converter on pdfplumber (no pdf2docx); OCR mode for scans; D-018–D-020 |
-| 2.3 Text / Markdown → PDF (C6) | todo | | | |
+| 2.2 PDF → Word / Excel / PowerPoint / Text (D2–D4, D6) | done | test_pdf_to_word (10), test_pdf_to_office (11), smoke `frompdf` | eb20478 | own converter on pdfplumber (no pdf2docx); OCR mode for scans; D-018–D-020 |
+| 2.3 Text / Markdown → PDF (C6) | done | test_text_to_pdf (9), smoke `text` | (this commit) | ReportLab; D-021 |
 | 2.4 Repair (B2) | todo | | | |
 | 2.5 HTML → PDF (C5) | todo | | | |
 | 2.6 PDF → PDF/A (D5) — best effort, no Ghostscript | todo | | | |

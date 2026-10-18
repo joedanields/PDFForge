@@ -1,4 +1,4 @@
-"""Convert to PDF (docs/02_FEATURES.md §C). Phase 1: Image → PDF (C1)."""
+"""Convert to PDF (docs/02_FEATURES.md §C): Image → PDF (C1), Text/Markdown → PDF (C6)."""
 
 from __future__ import annotations
 
@@ -7,17 +7,21 @@ from typing import Any
 
 import img2pdf
 from pikepdf import Pdf
+from reportlab.lib.pagesizes import A4, LETTER
+from reportlab.platypus import SimpleDocTemplate, Spacer
 
 from jobs import JobContext, ToolResult
 from protocol import EngineError, ErrorCode
 from utils.images import image_to_pdf_bytes
 from utils.naming import sanitize_stem
 from utils.pagecopy import PageCopier
-from utils.pdfio import deliver_many, deliver_pdf, save_pdf
+from utils.pdfio import deliver_converted, deliver_many, deliver_pdf, save_pdf
+from utils.textlayout import FAMILIES, Counter, Styles, markdown_flowables, plain_text_flowables
 from utils.validation import (
     IMAGE_SUFFIXES,
     check_readable_file,
     option_choice,
+    option_float,
     options_dict,
     require_str_list,
 )
@@ -107,3 +111,80 @@ def image_to_pdf(params: dict[str, Any], ctx: JobContext) -> ToolResult:
     return ToolResult(
         [final], {"images": len(inputs), "pages": pages, "bytes": final.stat().st_size}
     )
+
+
+# ── Text / Markdown → PDF (C6) ────────────────────────────────────────────────────────────
+
+TEXT_SUFFIXES = (".txt", ".md", ".markdown")
+TEXT_MAX_BYTES = 20 * 1024 * 1024
+TEXT_PAGE_SIZES: dict[str, tuple[float, float]] = {"a4": A4, "letter": LETTER}
+
+
+def read_text_file(path: Path) -> str:
+    """Decode a text file: BOM-marked UTF-8/UTF-16, else UTF-8, else Windows-1252."""
+    data = path.read_bytes()
+    if data.startswith(b"\xef\xbb\xbf"):
+        return data[3:].decode("utf-8", "replace")
+    if data.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return data.decode("utf-16", "replace")
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data.decode("cp1252", "replace")
+
+
+def text_to_pdf(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Plain text (.txt) and Markdown (.md) → one PDF each, beside the source."""
+    inputs = [Path(p) for p in require_str_list(params, "inputs", min_len=1, max_len=100)]
+    for path in inputs:
+        if path.suffix.lower() not in TEXT_SUFFIXES:
+            raise EngineError(
+                ErrorCode.INVALID_INPUT, f"{path.name} is not a text or Markdown file", str(path)
+            )
+        check_readable_file(path)
+        if path.stat().st_size > TEXT_MAX_BYTES:
+            raise EngineError(ErrorCode.UNSUPPORTED, f"{path.name} is larger than 20 MB", str(path))
+    options = options_dict(params)
+    family = option_choice(options, "font", tuple(FAMILIES), "helvetica")
+    size = option_float(options, "size", 11.0, lo=6.0, hi=36.0)
+    page_size = TEXT_PAGE_SIZES[option_choice(options, "page_size", ("a4", "letter"), "a4")]
+    margin = {"narrow": 36.0, "normal": 72.0, "wide": 108.0}[
+        option_choice(options, "margins", ("narrow", "normal", "wide"), "normal")
+    ]
+    styles = Styles(family, size)
+    outputs: list[Path] = []
+    pages = 0
+    replaced = 0
+    for n, source in enumerate(inputs):
+        ctx.check_cancelled()
+        ctx.progress(n * 95 / len(inputs), f"Typesetting {source.name}")
+        counter = Counter()
+        text = read_text_file(source)
+        markdown = source.suffix.lower() in (".md", ".markdown")
+        story = (
+            markdown_flowables(text, styles, counter)
+            if markdown
+            else plain_text_flowables(text, styles, counter)
+        ) or [Spacer(1, 1)]
+        tmp = ctx.temp_dir / f"text_{n:03d}" / f"{sanitize_stem(source.stem)}.pdf"
+        tmp.parent.mkdir(parents=True)
+        doc = SimpleDocTemplate(
+            str(tmp),
+            pagesize=page_size,
+            leftMargin=margin,
+            rightMargin=margin,
+            topMargin=margin,
+            bottomMargin=margin,
+            title=source.stem,
+            creator="PDFForge",
+        )
+        doc.build(story)
+        with Pdf.open(tmp) as pdf:
+            pages += len(pdf.pages)
+        replaced += counter.replaced
+        outputs.append(deliver_converted(tmp, params, source, protected=inputs))
+    ctx.progress(100, "Done")
+    stats: dict[str, Any] = {"files": len(outputs), "pages": pages}
+    if replaced:
+        stats["replaced_characters"] = replaced
+    return ToolResult(outputs, stats)

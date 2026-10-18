@@ -36,6 +36,7 @@ TOOLS: Mapping[str, ToolFn] = {
     "remove-pages": organize.remove_pages,
     "rotate": organize.rotate,
     "split": organize.split,
+    "text-to-pdf": to_pdf.text_to_pdf,
     "unlock": security.unlock,
     "watermark": edit.watermark,
     "word-to-pdf": office.word_to_pdf,

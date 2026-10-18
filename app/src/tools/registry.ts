@@ -607,6 +607,42 @@ export const pdfToTextOptions = z.object({
   ),
 });
 
+export const textToPdfOptions = z.object({
+  font: opt.choice(
+    "Font",
+    [
+      { value: "helvetica", label: "Sans serif" },
+      { value: "times", label: "Serif" },
+      { value: "courier", label: "Monospace" },
+    ],
+    "helvetica",
+    undefined,
+    { segmented: true },
+  ),
+  size: opt.int("Font size (pt)", 6, 36, 11),
+  page_size: opt.choice(
+    "Page size",
+    [
+      { value: "a4", label: "A4" },
+      { value: "letter", label: "Letter" },
+    ],
+    "a4",
+    undefined,
+    { segmented: true },
+  ),
+  margins: opt.choice(
+    "Margins",
+    [
+      { value: "narrow", label: "Narrow" },
+      { value: "normal", label: "Normal" },
+      { value: "wide", label: "Wide" },
+    ],
+    "normal",
+    undefined,
+    { segmented: true },
+  ),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -956,17 +992,39 @@ export const TOOLS: readonly ToolDef[] = [
     phase: 2,
     keywords: ["web page"],
   }),
-  soon({
+  {
     id: "text-to-pdf",
     ref: "C6",
     name: "Text to PDF",
     description: "Typeset plain text or Markdown files as a clean PDF.",
     category: "convert",
     icon: Type,
-    accepts: { extensions: ["txt", "md"], min: 1, max: 100, label: "Text or Markdown files" },
+    accepts: {
+      extensions: ["txt", "md", "markdown"],
+      min: 1,
+      max: 100,
+      label: "Text or Markdown files",
+    },
+    optionsSchema: textToPdfOptions,
+    status: "available",
     priority: "could",
     phase: 2,
-  }),
+    engineMethod: "text-to-pdf",
+    actionLabel: "Convert to PDF",
+    keywords: ["txt", "markdown", "md", "notes"],
+    summary: (s) => {
+      if (typeof s.pages !== "number") return null;
+      const pages = `${s.pages} ${s.pages === 1 ? "page" : "pages"}`;
+      const replaced =
+        typeof s.replaced_characters === "number"
+          ? ` · ${s.replaced_characters} characters could not be shown and became “?”`
+          : "";
+      return (
+        (typeof s.files === "number" && s.files > 1 ? `${s.files} PDFs, ${pages}` : pages) +
+        replaced
+      );
+    },
+  },
 
   // ── D. Convert from PDF ───────────────────────────────────────────────────────────────────
   {
