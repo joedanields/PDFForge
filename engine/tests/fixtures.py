@@ -234,3 +234,29 @@ def make_image_pdf(
         c.showPage()
     c.save()
     return path
+
+
+def make_exif_rotated_jpeg(
+    path: Path, size: tuple[int, int] = (400, 200), orientation: int = 6
+) -> Path:
+    """Stored landscape, displayed portrait (EXIF 6 = rotate 90° clockwise to display)."""
+    img = Image.new("RGB", size, (200, 40, 40))
+    exif = Image.Exif()
+    exif[0x0112] = orientation
+    img.save(path, "JPEG", exif=exif)
+    return path
+
+
+def make_multipage_tiff(path: Path, frames: int = 3, size: tuple[int, int] = (300, 400)) -> Path:
+    pages = [Image.new("RGB", size, (40 * n, 80, 120)) for n in range(frames)]
+    pages[0].save(path, "TIFF", save_all=True, append_images=pages[1:])
+    return path
+
+
+def make_heic(path: Path, size: tuple[int, int] = (320, 240)) -> Path:
+    """HEIC test image, encoded with pillow-heif (dev-only; the app only decodes, via pi-heif)."""
+    import pillow_heif
+
+    heif = pillow_heif.from_pillow(Image.new("RGB", size, (20, 160, 90)))
+    heif.save(str(path), quality=80)
+    return path

@@ -11,7 +11,13 @@ from pathlib import Path
 
 from reportlab.lib.pagesizes import A4, landscape
 
-from tests.fixtures import make_encrypted_pdf, make_image, make_text_pdf
+from tests.fixtures import (
+    make_encrypted_pdf,
+    make_exif_rotated_jpeg,
+    make_heic,
+    make_image,
+    make_text_pdf,
+)
 
 
 def main(out: Path) -> None:
@@ -25,6 +31,8 @@ def main(out: Path) -> None:
     make_encrypted_pdf(out / "secret.pdf", 2, "pw123")
     # 5 pages alternating portrait / landscape, for page tools and orientation filters
     make_text_pdf(out / "mixed.pdf", 5, page_sizes=[A4, landscape(A4)])
+    make_exif_rotated_jpeg(out / "photo.jpg", (800, 400))  # displays portrait
+    make_heic(out / "phone.heic")
     print(f"e2e inputs written to {out}")
 
 

@@ -1,0 +1,109 @@
+"""Convert to PDF (docs/02_FEATURES.md §C). Phase 1: Image → PDF (C1)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import img2pdf
+from pikepdf import Pdf
+
+from jobs import JobContext, ToolResult
+from protocol import EngineError, ErrorCode
+from utils.images import image_to_pdf_bytes
+from utils.naming import sanitize_stem
+from utils.pagecopy import PageCopier
+from utils.pdfio import deliver_many, deliver_pdf, save_pdf
+from utils.validation import (
+    IMAGE_SUFFIXES,
+    check_readable_file,
+    option_choice,
+    options_dict,
+    require_str_list,
+)
+
+IMAGE_TO_PDF_MAX = 500
+PAGE_SIZES: dict[str, tuple[float, float]] = {
+    "a4": (img2pdf.mm_to_pt(210), img2pdf.mm_to_pt(297)),
+    "letter": (img2pdf.in_to_pt(8.5), img2pdf.in_to_pt(11)),
+}
+MARGINS = {"none": 0.0, "small": img2pdf.mm_to_pt(10), "large": img2pdf.mm_to_pt(25)}
+
+
+def _layout(page_size: str, orientation: str, margin: str) -> Any:
+    border = (MARGINS[margin], MARGINS[margin])
+    if page_size == "fit":
+        # The page takes the image's own size (plus the margin); orientation follows the image.
+        return img2pdf.get_layout_fun(None, None, border if margin != "none" else None)
+    width, height = PAGE_SIZES[page_size]
+    if orientation == "landscape":
+        width, height = height, width
+    return img2pdf.get_layout_fun(
+        (width, height),
+        None,
+        border,
+        img2pdf.FitMode.into,
+        auto_orient=orientation == "auto",
+    )
+
+
+def image_to_pdf(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Images (JPG, PNG, BMP, TIFF incl. multi-page, WEBP, GIF, HEIC) → one PDF or one PDF each.
+
+    JPEG and PNG data is embedded without re-compression (img2pdf); EXIF orientation is
+    honoured.
+    """
+    inputs = [
+        Path(p) for p in require_str_list(params, "inputs", min_len=1, max_len=IMAGE_TO_PDF_MAX)
+    ]
+    for path in inputs:
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            raise EngineError(
+                ErrorCode.INVALID_INPUT, f"{path.name} is not a supported image", str(path)
+            )
+        check_readable_file(path)
+    options = options_dict(params)
+    page_size = option_choice(options, "page_size", ("fit", "a4", "letter"), "fit")
+    orientation = option_choice(options, "orientation", ("auto", "portrait", "landscape"), "auto")
+    margin = option_choice(options, "margin", ("none", "small", "large"), "none")
+    mode = option_choice(options, "mode", ("merge", "separate"), "merge")
+    layout = _layout(page_size, orientation, margin)
+
+    converted: list[Path] = []
+    for n, path in enumerate(inputs):
+        ctx.check_cancelled()
+        ctx.progress(n * 80 / len(inputs), f"Converting {path.name}")
+        pdf_bytes = image_to_pdf_bytes(path, ctx.temp_dir / f"work_{n}", layout)
+        target = ctx.temp_dir / "pdfs" / f"{n:04d}" / f"{sanitize_stem(path.stem)}.pdf"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(pdf_bytes)
+        converted.append(target)
+
+    if mode == "separate":
+        outputs, extra = deliver_many(converted, params, inputs[0], "pdfs", ctx, protected=inputs)
+        pages = 0
+        for path in outputs:
+            with Pdf.open(path) as pdf:
+                pages += len(pdf.pages)
+        return ToolResult(outputs, {"images": len(inputs), "pages": pages, **extra})
+
+    out = Pdf.new()
+    opened: list[Pdf] = []
+    tmp = ctx.temp_dir / "images.pdf"
+    try:
+        copier = PageCopier(out)
+        for path in converted:
+            pdf = Pdf.open(path)
+            opened.append(pdf)
+            copier.add(pdf, range(len(pdf.pages)))
+        copier.finish()
+        save_pdf(out, tmp, ctx, start=85)
+        pages = len(out.pages)
+    finally:
+        out.close()
+        for pdf in opened:
+            pdf.close()
+    final = deliver_pdf(tmp, params, inputs[0], "images", protected=inputs)
+    return ToolResult(
+        [final], {"images": len(inputs), "pages": pages, "bytes": final.stat().st_size}
+    )

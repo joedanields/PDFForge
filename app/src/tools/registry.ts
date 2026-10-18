@@ -115,7 +115,7 @@ export interface CheckContext {
 }
 
 const PDF = ["pdf"] as const;
-const IMAGES = ["jpg", "jpeg", "png", "bmp", "tif", "tiff", "webp", "gif", "heic"] as const;
+const IMAGES = ["jpg", "jpeg", "png", "bmp", "tif", "tiff", "webp", "gif", "heic", "heif"] as const;
 const NO_OPTIONS = z.object({});
 
 const onePdf: AcceptSpec = { extensions: PDF, min: 1, max: 1, label: "One PDF file" };
@@ -261,6 +261,52 @@ function splitBadge(
   return files.length === 1 ? `File ${files[0]}` : `Files ${files.join(", ")}`;
 }
 
+export const imageToPdfOptions = z.object({
+  page_size: opt.choice(
+    "Page size",
+    [
+      { value: "fit", label: "Fit image" },
+      { value: "a4", label: "A4" },
+      { value: "letter", label: "Letter" },
+    ],
+    "fit",
+    "“Fit image” makes each page exactly the size of its picture.",
+    { segmented: true },
+  ),
+  orientation: opt.choice(
+    "Orientation",
+    [
+      { value: "auto", label: "Auto" },
+      { value: "portrait", label: "Portrait" },
+      { value: "landscape", label: "Landscape" },
+    ],
+    "auto",
+    "Auto turns the page to match each picture.",
+    { segmented: true, showWhen: { key: "page_size", values: ["a4", "letter"] } },
+  ),
+  margin: opt.choice(
+    "Margin",
+    [
+      { value: "none", label: "None" },
+      { value: "small", label: "Small" },
+      { value: "large", label: "Large" },
+    ],
+    "none",
+    undefined,
+    { segmented: true },
+  ),
+  mode: opt.choice(
+    "Create",
+    [
+      { value: "merge", label: "One PDF" },
+      { value: "separate", label: "One PDF per image" },
+    ],
+    "merge",
+    "The order of the images above is the page order.",
+    { segmented: true },
+  ),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -277,10 +323,10 @@ export const TOOLS: readonly ToolDef[] = [
     category: "organize",
     icon: Combine,
     accepts: {
-      extensions: [...PDF, ...IMAGES.filter((e) => e !== "heic")],
+      extensions: [...PDF, ...IMAGES],
       min: 2,
       max: 500,
-      label: "PDFs or images (JPG, PNG, BMP, TIFF, WEBP, GIF) — at least 2 files",
+      label: "PDFs or images (JPG, PNG, BMP, TIFF, WEBP, GIF, HEIC) — at least 2 files",
     },
     optionsSchema: mergeOptions,
     status: "available",
@@ -477,18 +523,34 @@ export const TOOLS: readonly ToolDef[] = [
   }),
 
   // ── C. Convert to PDF ─────────────────────────────────────────────────────────────────────
-  soon({
+  {
     id: "image-to-pdf",
     ref: "C1",
     name: "Image to PDF",
     description: "Turn JPG, PNG, TIFF, WEBP or HEIC images into a PDF.",
     category: "convert",
     icon: FileImage,
-    accepts: { extensions: IMAGES, min: 1, max: 500, label: "Images" },
+    accepts: {
+      extensions: IMAGES,
+      min: 1,
+      max: 500,
+      label: "Images (JPG, PNG, BMP, TIFF, WEBP, GIF, HEIC)",
+    },
+    optionsSchema: imageToPdfOptions,
+    status: "available",
     priority: "must",
     phase: 1,
-    keywords: ["jpg to pdf", "png", "photo"],
-  }),
+    engineMethod: "image-to-pdf",
+    actionLabel: "Convert to PDF",
+    keywords: ["jpg to pdf", "png", "photo", "scan", "heic", "picture"],
+    summary: (s) => {
+      if (typeof s.images !== "number") return null;
+      const images = `${s.images} ${s.images === 1 ? "image" : "images"}`;
+      return typeof s.files === "number" && s.files > 1
+        ? `${images} → ${s.files} PDFs`
+        : `${images} → ${String(s.pages)} ${s.pages === 1 ? "page" : "pages"}`;
+    },
+  },
   soon({
     id: "word-to-pdf",
     ref: "C2",

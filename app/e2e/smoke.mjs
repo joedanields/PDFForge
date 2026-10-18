@@ -12,7 +12,15 @@ import { join } from "node:path";
 import { chromium } from "playwright-core";
 
 /** Tools that are no longer "Coming soon" (update as Phase 1 lands). */
-const AVAILABLE = ["merge", "rotate", "remove-pages", "extract-pages", "split", "organize"];
+const AVAILABLE = [
+  "merge",
+  "rotate",
+  "remove-pages",
+  "extract-pages",
+  "split",
+  "organize",
+  "image-to-pdf",
+];
 const TOTAL_TOOLS = 31;
 
 const args = process.argv.slice(2);
@@ -390,6 +398,32 @@ if (section("organize")) {
   const text = await runAndWait("Save PDF");
   expect(text.includes("6 pages from 2 files"), "saved: 6 pages from 2 files");
   expect(/Chapter 1_organize( \(\d+\))?\.pdf/.test(text), "output named Chapter 1_organize.pdf");
+}
+
+if (section("images")) {
+  console.log("Image to PDF");
+  await go("#/tool/image-to-pdf");
+  await addFiles("photo.jpg", "cover.png", "phone.heic");
+  await page.waitForFunction(() => document.querySelectorAll("main ol li").length === 3);
+  await page.waitForFunction(() => !document.body.innerText.includes("couldn't be read"));
+  ok("JPG, PNG and HEIC accepted");
+  expect(
+    !(await page.getByText("Orientation").isVisible()),
+    "orientation only shown for fixed page sizes",
+  );
+  await page.getByRole("radio", { name: "A4" }).click();
+  await page.getByText("Orientation").waitFor();
+  await page.getByRole("radio", { name: "Small" }).click();
+  await shot("images-ready");
+  const text = await runAndWait("Convert to PDF");
+  expect(text.includes("3 images → 3 pages"), "3 images → 3 pages");
+  expect(/photo_images( \(\d+\))?\.pdf/.test(text), "output named photo_images.pdf");
+  await startOver();
+  await addFiles("photo.jpg", "cover.png");
+  await page.waitForFunction(() => document.querySelectorAll("main ol li").length === 2);
+  await page.getByRole("radio", { name: "One PDF per image" }).click();
+  const text2 = await runAndWait("Convert to PDF");
+  expect(text2.includes("2 images → 2 PDFs"), "one PDF per image");
 }
 
 if (!only || only.has("echo") || echoOnly) {

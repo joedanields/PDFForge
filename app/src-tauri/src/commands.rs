@@ -15,7 +15,9 @@ use crate::settings::{Settings, SettingsStore};
 use crate::{app_data_root, now_ms};
 
 /// Inputs the UI may read for thumbnails (bytes only, never written).
-const READABLE_EXTENSIONS: &[&str] = &["pdf", "jpg", "jpeg", "png", "bmp", "tif", "tiff", "webp", "gif"];
+const READABLE_EXTENSIONS: &[&str] = &[
+    "pdf", "jpg", "jpeg", "png", "bmp", "tif", "tiff", "webp", "gif", "heic", "heif",
+];
 const MAX_READ_BYTES: u64 = 256 * 1024 * 1024;
 
 type CmdResult<T> = Result<T, String>;

@@ -7,7 +7,9 @@ from typing import Any
 
 from protocol import EngineError, ErrorCode
 
-IMAGE_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp", ".gif"})
+IMAGE_SUFFIXES = frozenset(
+    {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp", ".gif", ".heic", ".heif"}
+)
 _PDF_MAGIC = b"%PDF-"
 _SNIFF_BYTES = 1024
 
