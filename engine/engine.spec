@@ -19,6 +19,7 @@ a = Analysis(
         "tools.debug",
         "tools.edit",
         "tools.from_pdf",
+        "tools.office",
         "tools.optimize",
         "tools.organize",
         "tools.security",

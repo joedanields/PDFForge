@@ -12,12 +12,15 @@ from pathlib import Path
 from reportlab.lib.pagesizes import A4, landscape
 
 from tests.fixtures import (
+    make_docx,
     make_encrypted_pdf,
     make_exif_rotated_jpeg,
     make_heic,
     make_image,
     make_image_pdf,
+    make_pptx,
     make_text_pdf,
+    make_xlsx,
 )
 
 
@@ -36,6 +39,9 @@ def main(out: Path) -> None:
     make_heic(out / "phone.heic")
     make_image_pdf(out / "scan.pdf", 2, (400, 500))
     make_image_pdf(out / "bigscan.pdf", 2, (1654, 2339), quality=95, grain=3)  # 200 dpi
+    make_docx(out / "report.docx", pages=3)
+    make_pptx(out / "deck.pptx", slides=3)
+    make_xlsx(out / "book.xlsx", columns=30)
     print(f"e2e inputs written to {out}")
 
 

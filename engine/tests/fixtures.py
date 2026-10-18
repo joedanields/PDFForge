@@ -262,3 +262,61 @@ def make_heic(path: Path, size: tuple[int, int] = (320, 240)) -> Path:
     heif = pillow_heif.from_pillow(Image.new("RGB", size, (20, 160, 90)))
     heif.save(str(path), quality=80)
     return path
+
+
+# ── Office documents (Phase 2 conversions) ────────────────────────────────────────────────
+
+
+def make_docx(path: Path, pages: int = 3, title: str = "Quarterly report") -> Path:
+    """DOCX with a heading, ``pages`` pages of paragraphs (explicit page breaks) and a table."""
+    from docx import Document
+
+    doc = Document()
+    doc.add_heading(title, 0)
+    for n in range(1, pages + 1):
+        doc.add_paragraph(f"Section {n}. " + "The quick brown fox jumps over the lazy dog. " * 6)
+        if n == 1:
+            table = doc.add_table(rows=2, cols=2)
+            for r, row in enumerate(table.rows):
+                for c, cell in enumerate(row.cells):
+                    cell.text = f"R{r + 1}C{c + 1}"
+        if n < pages:
+            doc.add_page_break()  # type: ignore[no-untyped-call]
+    doc.save(str(path))
+    return path
+
+
+def make_pptx(path: Path, slides: int = 3, notes: bool = True) -> Path:
+    from pptx import Presentation
+
+    deck = Presentation()
+    for n in range(1, slides + 1):
+        slide = deck.slides.add_slide(deck.slide_layouts[1])
+        slide.shapes.title.text = f"Slide {n}"
+        if notes:
+            slide.notes_slide.notes_text_frame.text = f"Speaker note {n}"
+    deck.save(str(path))
+    return path
+
+
+def make_xlsx(path: Path, columns: int = 30, rows: int = 20, active: int = 0) -> Path:
+    """Workbook with a wide 'Data' sheet and a small 'Summary' sheet; ``active`` = active tab."""
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    data = wb.worksheets[0]
+    data.title = "Data"
+    data.append([f"Column {c}" for c in range(1, columns + 1)])
+    for r in range(1, rows + 1):
+        data.append([r * c for c in range(1, columns + 1)])
+    summary = wb.create_sheet("Summary")
+    summary.append(["Summary", "", "total"])
+    wb.active = active
+    wb.save(str(path))
+    return path
+
+
+def make_encrypted_office(path: Path) -> Path:
+    """What a password-protected DOCX/XLSX/PPTX looks like: an OLE compound file."""
+    path.write_bytes(bytes.fromhex("D0CF11E0A1B11AE1") + b"\0" * 504)
+    return path

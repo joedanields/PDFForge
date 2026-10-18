@@ -38,6 +38,9 @@ const IMPLEMENTED = [
   "pdf-to-image",
   "protect",
   "unlock",
+  "word-to-pdf",
+  "powerpoint-to-pdf",
+  "excel-to-pdf",
 ];
 
 describe("tool registry contents", () => {

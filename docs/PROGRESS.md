@@ -5,14 +5,14 @@
 ## Now
 
 - **Current phase:** Phase 2 — Conversions
-- **Working on:** 2.1 Word / PowerPoint / Excel → PDF
+- **Working on:** 2.2 PDF → Word / Excel / PowerPoint / Text
 
 ## Phase 2 — Conversions
 
 | Tool | Status | Tests | Commit | Notes |
 |------|--------|-------|--------|-------|
-| 2.0 Vendor: LibreOffice + Tesseract fetch/verify/trim, helper runner | done | test_vendor (10) | (this commit) | LibreOffice 26.2.6 (~490 MB), Tesseract 5.4.0 + eng/osd/tam/hin (~134 MB); D-012–D-015 |
-| 2.1 Word / PowerPoint / Excel → PDF (C2–C4) | todo | | | |
+| 2.0 Vendor: LibreOffice + Tesseract fetch/verify/trim, helper runner | done | test_vendor (10) | bf15a1a | LibreOffice 26.2.6 (~490 MB), Tesseract 5.4.0 + eng/osd/tam/hin (~134 MB); D-012–D-015 |
+| 2.1 Word / PowerPoint / Excel → PDF (C2–C4) | done | test_office (17), smoke `office` | (this commit) | LibreOffice headless; 50-page DOCX well under 15 s; D-016, D-017 |
 | 2.2 PDF → Word / Excel / PowerPoint / Text (D2–D4, D6) | todo | | | |
 | 2.3 Text / Markdown → PDF (C6) | todo | | | |
 | 2.4 Repair (B2) | todo | | | |

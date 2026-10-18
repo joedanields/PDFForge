@@ -539,6 +539,32 @@ export const compressOptions = z.object({
   ),
 });
 
+export const powerpointToPdfOptions = z.object({
+  include_notes: opt.bool(
+    "Include speaker notes",
+    false,
+    "Adds a notes page after the slides, one per slide.",
+  ),
+});
+
+export const excelToPdfOptions = z.object({
+  sheets: opt.choice(
+    "Sheets",
+    [
+      { value: "all", label: "All sheets" },
+      { value: "active", label: "Active sheet only" },
+    ],
+    "all",
+    "The active sheet is the one that was open when the file was last saved.",
+    { segmented: true },
+  ),
+  fit_width: opt.bool(
+    "Fit each sheet to the page width",
+    false,
+    "Wide sheets are scaled down instead of being split across pages.",
+  ),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -803,7 +829,7 @@ export const TOOLS: readonly ToolDef[] = [
         : `${images} → ${String(s.pages)} ${s.pages === 1 ? "page" : "pages"}`;
     },
   },
-  soon({
+  {
     id: "word-to-pdf",
     ref: "C2",
     name: "Word to PDF",
@@ -816,11 +842,20 @@ export const TOOLS: readonly ToolDef[] = [
       max: 100,
       label: "Word documents",
     },
+    optionsSchema: NO_OPTIONS,
+    status: "available",
     priority: "must",
     phase: 2,
-    keywords: ["docx"],
-  }),
-  soon({
+    engineMethod: "word-to-pdf",
+    actionLabel: "Convert to PDF",
+    keywords: ["docx", "doc", "odt", "rtf", "document"],
+    summary: (s) => {
+      if (typeof s.pages !== "number") return null;
+      const pages = `${s.pages} ${s.pages === 1 ? "page" : "pages"}`;
+      return typeof s.files === "number" && s.files > 1 ? `${s.files} PDFs, ${pages}` : pages;
+    },
+  },
+  {
     id: "powerpoint-to-pdf",
     ref: "C3",
     name: "PowerPoint to PDF",
@@ -828,11 +863,20 @@ export const TOOLS: readonly ToolDef[] = [
     category: "convert",
     icon: Presentation,
     accepts: { extensions: ["ppt", "pptx", "odp"], min: 1, max: 100, label: "Presentations" },
+    optionsSchema: powerpointToPdfOptions,
+    status: "available",
     priority: "must",
     phase: 2,
-    keywords: ["pptx", "slides"],
-  }),
-  soon({
+    engineMethod: "powerpoint-to-pdf",
+    actionLabel: "Convert to PDF",
+    keywords: ["pptx", "ppt", "slides", "deck", "presentation"],
+    summary: (s) => {
+      if (typeof s.pages !== "number") return null;
+      const pages = `${s.pages} ${s.pages === 1 ? "page" : "pages"}`;
+      return typeof s.files === "number" && s.files > 1 ? `${s.files} PDFs, ${pages}` : pages;
+    },
+  },
+  {
     id: "excel-to-pdf",
     ref: "C4",
     name: "Excel to PDF",
@@ -845,10 +889,19 @@ export const TOOLS: readonly ToolDef[] = [
       max: 100,
       label: "Spreadsheets",
     },
+    optionsSchema: excelToPdfOptions,
+    status: "available",
     priority: "must",
     phase: 2,
-    keywords: ["xlsx", "spreadsheet"],
-  }),
+    engineMethod: "excel-to-pdf",
+    actionLabel: "Convert to PDF",
+    keywords: ["xlsx", "xls", "csv", "spreadsheet", "sheet"],
+    summary: (s) => {
+      if (typeof s.pages !== "number") return null;
+      const pages = `${s.pages} ${s.pages === 1 ? "page" : "pages"}`;
+      return typeof s.files === "number" && s.files > 1 ? `${s.files} PDFs, ${pages}` : pages;
+    },
+  },
   soon({
     id: "html-to-pdf",
     ref: "C5",

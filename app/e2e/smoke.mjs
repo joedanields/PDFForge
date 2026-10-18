@@ -26,6 +26,9 @@ const AVAILABLE = [
   "page-numbers",
   "watermark",
   "compress",
+  "word-to-pdf",
+  "powerpoint-to-pdf",
+  "excel-to-pdf",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -599,6 +602,30 @@ if (section("compress")) {
     !(await page.getByRole("button", { name: "Open file" }).isVisible()),
     "no new file to open",
   );
+}
+
+if (section("office")) {
+  console.log("Office to PDF");
+  await go("#/tool/word-to-pdf");
+  await addFiles("report.docx");
+  await page.waitForFunction(() => document.querySelectorAll("main ol li").length === 1);
+  const word = await runAndWait("Convert to PDF");
+  expect(word.includes("3 pages"), "DOCX → 3 pages");
+  expect(/report( \(\d+\))?\.pdf/.test(word), "output named report.pdf");
+  await go("#/tool/powerpoint-to-pdf");
+  await addFiles("deck.pptx");
+  await page.waitForFunction(() => document.querySelectorAll("main ol li").length === 1);
+  await page.getByLabel("Include speaker notes").click();
+  const deck = await runAndWait("Convert to PDF");
+  expect(deck.includes("6 pages"), "PPTX with notes → 3 slides + 3 notes pages");
+  await go("#/tool/excel-to-pdf");
+  await addFiles("book.xlsx");
+  await page.waitForFunction(() => document.querySelectorAll("main ol li").length === 1);
+  await page.getByRole("radio", { name: "Active sheet only" }).click();
+  await page.getByLabel("Fit each sheet to the page width").click();
+  await shot("excel-ready");
+  const book = await runAndWait("Convert to PDF");
+  expect(/\b1 page\b/.test(book), "active sheet fitted on one page");
 }
 
 if (!only || only.has("echo") || echoOnly) {

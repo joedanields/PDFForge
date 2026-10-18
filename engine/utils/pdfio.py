@@ -92,6 +92,17 @@ def deliver_pdf(
     return commit(tmp, desired, protected=protected)
 
 
+def deliver_converted(
+    tmp: Path, params: dict[str, Any], source: Path, protected: Sequence[Path]
+) -> Path:
+    """Commit a format conversion as ``{original}{new suffix}`` (report.docx -> report.pdf)
+    beside its source or in ``output_dir``; the new extension already tells them apart.
+    Never overwrites (``report (1).pdf``)."""
+    out_dir = optional_str(params, "output_dir")
+    folder = Path(out_dir) if out_dir else source.parent
+    return commit(tmp, folder / f"{sanitize_stem(source.stem)}{tmp.suffix}", protected=protected)
+
+
 def deliver_many(
     files: Sequence[Path],
     params: dict[str, Any],

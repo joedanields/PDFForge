@@ -15,6 +15,9 @@ dependencies = [
     "img2pdf>=0.5.1",
     "pi-heif>=0.20",
     "reportlab>=4.2",  # page numbers / watermark overlays (BSD)
+    "python-docx>=1.2.0",
+    "python-pptx>=1.0.2",
+    "openpyxl>=3.1.5",
 ]
 
 [dependency-groups]
@@ -27,6 +30,8 @@ dev = [
     "mypy>=1.13",
     "pyinstaller>=6.11",
     "pillow-heif>=0.20",
+    "lxml-stubs>=0.5.1",
+    "types-openpyxl>=3.1.5.20261017",
 ]
 
 [tool.uv]
