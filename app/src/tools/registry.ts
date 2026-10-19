@@ -81,7 +81,7 @@ export interface ToolDef {
   requiresIntelligence?: boolean;
   /** "files": file cards (default). "pages": one PDF shown as a selectable page grid.
    * "organize": page board built from one or more PDFs. */
-  layout?: "files" | "pages" | "organize" | "editor";
+  layout?: "files" | "pages" | "organize" | "editor" | "sign";
   /** pages layout: the page-range option that mirrors the grid selection. */
   pageSelection?: {
     option: string;
@@ -1490,18 +1490,27 @@ export const TOOLS: readonly ToolDef[] = [
           : "Password removed"
         : "Restrictions removed",
   },
-  soon({
+  {
     id: "sign",
     ref: "F3",
     name: "Sign PDF",
-    description: "Place a typed, drawn or image signature on your document.",
+    description: "Sign with a typed, drawn or uploaded signature, plus initials and the date.",
     category: "security",
     icon: Signature,
     accepts: onePdf,
+    optionsSchema: NO_OPTIONS,
+    status: "available",
     priority: "should",
     phase: 3,
-    keywords: ["signature", "e-sign"],
-  }),
+    engineMethod: "sign",
+    actionLabel: "Sign and save",
+    keywords: ["signature", "e-sign", "initials", "fill and sign"],
+    layout: "sign",
+    summary: (s) =>
+      typeof s.objects === "number"
+        ? `${s.objects} ${s.objects === 1 ? "item" : "items"} signed onto the document`
+        : null,
+  },
   soon({
     id: "redact",
     ref: "F4",

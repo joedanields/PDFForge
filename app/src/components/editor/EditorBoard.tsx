@@ -495,11 +495,14 @@ function PageCanvas(props: CanvasProps) {
     svgRef.current?.setPointerCapture(e.pointerId);
     if (props.stamp) {
       const w = props.stamp.w;
-      const h = props.stamp.h;
+      // Picture stamps carry their height relative to the page width (keeps the aspect).
+      const h =
+        props.stamp.kind === "image" ? (props.stamp.h * size.width) / size.height : props.stamp.h;
       const placed: EditObject = {
         ...props.stamp,
         id: newId(),
         page,
+        h,
         x: Math.min(1 - w, Math.max(0, p[0] - w / 2)),
         y: Math.min(1 - h, Math.max(0, p[1] - h / 2)),
       };

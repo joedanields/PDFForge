@@ -51,6 +51,7 @@ const IMPLEMENTED = [
   "pdf-to-pdfa",
   "ocr",
   "edit-pdf",
+  "sign",
 ];
 
 describe("tool registry contents", () => {

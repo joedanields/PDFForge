@@ -99,9 +99,23 @@ export function SettingsPage() {
 
       <Section title={t("settings.privacy")}>
         <p className="text-sm text-text-muted">{t("settings.offline")}</p>
-        <Button variant="secondary" onClick={() => void clear()}>
-          {t("settings.clearHistory")}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => void clear()}>
+            {t("settings.clearHistory")}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={!isTauri()}
+            onClick={() =>
+              void api
+                .clearSignatures()
+                .then(() => setMessage({ tone: "ok", text: t("settings.signaturesCleared") }))
+                .catch((err: unknown) => setMessage({ tone: "error", text: String(err) }))
+            }
+          >
+            {t("settings.clearSignatures")}
+          </Button>
+        </div>
       </Section>
 
       <Section title={t("settings.about")}>

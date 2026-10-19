@@ -7,6 +7,7 @@ import { FileList } from "@/components/FileList";
 import { OptionsForm } from "@/components/OptionsForm";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
 import { EditorBoard } from "@/components/editor/EditorBoard";
+import { SignBoard } from "@/components/editor/SignBoard";
 import { OrganizeBoard, type OrganizePlan } from "@/components/OrganizeBoard";
 import { PagesPanel } from "@/components/PagesPanel";
 import { ProgressOverlay } from "@/components/ProgressOverlay";
@@ -127,8 +128,10 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   const pageTool = tool.layout === "pages";
   const organizeTool = tool.layout === "organize";
   const [organizePlan, setOrganizePlan] = useState<OrganizePlan | null>(null);
-  const editorTool = tool.layout === "editor";
+  const signTool = tool.layout === "sign";
+  const editorTool = tool.layout === "editor" || signTool;
   const [editorObjects, setEditorObjects] = useState<EditObject[]>([]);
+  const [signImages, setSignImages] = useState<Record<string, string>>({});
   const editing = phase.kind === "edit";
 
   const patchFile = useCallback((key: string, patch: Partial<InputFile>) => {
@@ -302,7 +305,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     }
   }
   if (!blocker && editorTool && files.length > 0 && editorObjects.length === 0) {
-    blocker = t("editor.empty");
+    blocker = t(signTool ? "sign.empty" : "editor.empty");
   }
   if (!blocker && organizeTool && files.length > 0 && !organizePlan?.pages.length) {
     blocker = t("organize.empty");
@@ -381,7 +384,17 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
       });
       return;
     }
-    const { options: plain, secrets } = splitSecrets(tool.optionsSchema, parsed.data);
+    const { options: plain, secrets: formSecrets } = splitSecrets(tool.optionsSchema, parsed.data);
+    // Signature pictures are secrets: sent to the engine, never stored in job history.
+    const used = new Set(
+      editorObjects
+        .map((o) => o.image)
+        .filter((ref): ref is string => typeof ref === "string" && ref.startsWith("secret:"))
+        .map((ref) => ref.slice("secret:".length)),
+    );
+    const images = Object.fromEntries(Object.entries(signImages).filter(([id]) => used.has(id)));
+    const secrets =
+      signTool && Object.keys(images).length > 0 ? { ...formSecrets, images } : formSecrets;
     const converted = tool.toEngine ? tool.toEngine(plain) : plain;
     const engineOptions = editorTool
       ? { ...converted, objects: editorObjects.map(editorToEngine) }
@@ -482,7 +495,16 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
               disabled={!editing}
             />
           )}
-          {editorTool && files[0]?.status === "ready" && (
+          {signTool && files[0]?.status === "ready" && (
+            <SignBoard
+              key={files[0].key}
+              file={files[0]}
+              disabled={!editing}
+              onChange={setEditorObjects}
+              onImages={setSignImages}
+            />
+          )}
+          {editorTool && !signTool && files[0]?.status === "ready" && (
             <EditorBoard
               key={files[0].key}
               file={files[0]}

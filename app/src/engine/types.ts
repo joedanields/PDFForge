@@ -77,6 +77,15 @@ export interface OcrLanguage {
   bundled: boolean;
 }
 
+/** A saved signature (decrypted by the shell for the current Windows user). */
+export interface SavedSignature {
+  id: string;
+  kind: string;
+  created: number;
+  /** PNG, base64. */
+  png: string;
+}
+
 export interface AppInfo {
   version: string;
   dataDir: string;

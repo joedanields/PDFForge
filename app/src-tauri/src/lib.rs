@@ -4,6 +4,7 @@ pub mod engine;
 pub mod launch;
 pub mod ocr;
 pub mod settings;
+pub mod signatures;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -172,6 +173,10 @@ pub fn run() {
             commands::file_stats,
             launch::take_open_requests,
             ocr::ocr_languages,
+            signatures::list_signatures,
+            signatures::save_signature,
+            signatures::delete_signature,
+            signatures::clear_signatures,
             ocr::add_ocr_language,
             ocr::remove_ocr_language,
         ])

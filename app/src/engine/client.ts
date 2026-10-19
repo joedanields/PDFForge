@@ -14,6 +14,7 @@ import type {
   OcrLanguage,
   ProgressEvent,
   RecentOutput,
+  SavedSignature,
   Settings,
 } from "./types";
 
@@ -106,6 +107,11 @@ export const api = {
   openNotices: () => invoke<undefined>("open_notices"),
   fileStats: (paths: string[]) => invoke<FileStat[]>("file_stats", { paths }),
   readInputFile: (path: string) => invoke<ArrayBuffer>("read_input_file", { path }),
+  listSignatures: () => invoke<SavedSignature[]>("list_signatures"),
+  saveSignature: (kind: string, png: string) =>
+    invoke<SavedSignature>("save_signature", { kind, png }),
+  deleteSignature: (id: string) => invoke<undefined>("delete_signature", { id }),
+  clearSignatures: () => invoke<undefined>("clear_signatures"),
   takeOpenRequests: () => invoke<string[]>("take_open_requests"),
   ocrLanguages: () => invoke<OcrLanguage[]>("ocr_languages"),
   addOcrLanguage: (path: string) => invoke<OcrLanguage[]>("add_ocr_language", { path }),

@@ -2522,6 +2522,7 @@ dependencies = [
 name = "pdfforge"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "log",
  "rusqlite",
  "serde",
@@ -2536,6 +2537,7 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "uuid",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

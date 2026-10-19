@@ -5,15 +5,15 @@
 ## Now
 
 - **Current phase:** Phase 3 — Editing & security (Phases 1 and 2 done)
-- **Working on:** 3.2 Sign PDF
+- **Working on:** 3.3 Crop PDF
 
 ## Phase 3 — Editing & security
 
 | Tool | Status | Tests | Commit | Notes |
 |------|--------|-------|--------|-------|
 | 3.0 Built-in viewer + "Open with PDFForge" (.pdf association) | done | Rust launch (2), smoke `viewer` | 5c70b0d | pdf.js viewer: thumbnails, zoom, find, page navigation, hand-off to tools; D-028 |
-| 3.1 Edit PDF (E1) | done | test_edit_pdf (13), vitest editor (7), smoke `edit` | (this commit) | editor: text, pictures, shapes, arrows, pen, highlighter, notes, eraser, undo/redo, zoom; flatten or annotations; D-029 |
-| 3.2 Sign PDF (F3) | todo | | | |
+| 3.1 Edit PDF (E1) | done | test_edit_pdf (13), vitest editor (7), smoke `edit` | 2cbf204 | editor: text, pictures, shapes, arrows, pen, highlighter, notes, eraser, undo/redo, zoom; flatten or annotations; D-029 |
+| 3.2 Sign PDF (F3) | done | test_sign (6), Rust signatures (3), smoke `sign` | (this commit) | type / draw / upload, initials, date, text; DPAPI-encrypted saved signatures; D-030 |
 | 3.3 Crop PDF (E4) | todo | | | |
 | 3.4 Redact PDF (F4) — true redaction | todo | | | |
 | 3.5 Compare PDF (F5) | todo | | | |

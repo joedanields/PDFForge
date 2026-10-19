@@ -39,6 +39,7 @@ const AVAILABLE = [
   "pdf-to-pdfa",
   "ocr",
   "edit-pdf",
+  "sign",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -815,6 +816,47 @@ if (section("edit")) {
   const text = await runAndWait("Save changes");
   expect(text.includes("3 objects added"), "3 objects saved into the page");
   expect(/mixed_edited( \(\d+\))?\.pdf/.test(text), "output mixed_edited.pdf");
+}
+
+if (section("sign")) {
+  console.log("Sign PDF");
+  await go("#/tool/sign");
+  await addFiles("mixed.pdf");
+  const canvas = page.getByTestId("editor-canvas");
+  await canvas.waitFor({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Signature", exact: true }).click();
+  await page.getByRole("tab", { name: "Draw" }).click();
+  const pad = page.getByTestId("signature-pad");
+  const padBox = await pad.boundingBox();
+  if (!padBox) throw new Error("signature pad has no size");
+  await page.mouse.move(padBox.x + 30, padBox.y + 100);
+  await page.mouse.down();
+  for (const [dx, dy] of [
+    [80, -60],
+    [160, 40],
+    [240, -30],
+    [320, 50],
+  ]) {
+    await page.mouse.move(padBox.x + 30 + dx, padBox.y + 100 + dy, { steps: 5 });
+  }
+  await page.mouse.up();
+  // Do not write a test signature into the real profile.
+  await page.getByLabel(/Save on this computer/).uncheck();
+  await page.getByRole("button", { name: "Use", exact: true }).click();
+  await page.getByText("Click on the page to place it").waitFor();
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("editor canvas has no size");
+  await page.mouse.click(box.x + box.width * 0.6, box.y + box.height * 0.3);
+  await page.getByText("1 added").waitFor();
+  ok("drawn signature placed on the page");
+  await page.getByRole("button", { name: "Date", exact: true }).click();
+  await page.mouse.click(box.x + box.width * 0.6, box.y + box.height * 0.4);
+  await page.getByText("2 added").waitFor();
+  ok("date placed");
+  await shot("sign-ready");
+  const text = await runAndWait("Sign and save");
+  expect(text.includes("2 items signed onto the document"), "signed");
+  expect(/mixed_signed( \(\d+\))?\.pdf/.test(text), "output mixed_signed.pdf");
 }
 
 if (!only || only.has("echo") || echoOnly) {

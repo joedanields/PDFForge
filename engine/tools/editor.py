@@ -14,6 +14,8 @@ Existing page content is never edited (02 E1: "editing existing text is out of s
 
 from __future__ import annotations
 
+import base64
+import binascii
 import io
 import uuid
 from dataclasses import dataclass, field
@@ -89,7 +91,11 @@ def _color(raw: dict[str, Any], key: str, default: str | None) -> str | None:
     return value
 
 
-def parse_objects(raw: Any, page_count: int) -> list[EditObject]:
+def parse_objects(
+    raw: Any, page_count: int, images: dict[str, Path] | None = None
+) -> list[EditObject]:
+    """Validate the UI's objects. ``images`` resolves ``secret:<key>`` picture references
+    (Sign: saved signatures arrive as job secrets, never as file paths or in history)."""
     if not isinstance(raw, list) or not raw:
         raise _bad("Add something to a page first")
     if len(raw) > MAX_OBJECTS:
@@ -149,7 +155,12 @@ def parse_objects(raw: Any, page_count: int) -> list[EditObject]:
         if kind in ("text", "image", "rect", "ellipse") and (obj.w <= 0 or obj.h <= 0):
             raise _bad("An object has no size")
         if kind == "image":
-            path = Path(str(item.get("image", "")))
+            ref = str(item.get("image", ""))
+            path = (
+                (images or {}).get(ref.removeprefix("secret:"), Path())
+                if ref.startswith("secret:")
+                else Path(ref)
+            )
             if path.suffix.lower() not in IMAGE_SUFFIXES or not path.is_file():
                 raise EngineError(ErrorCode.INVALID_INPUT, "A picture file could not be found")
             obj.image = path
@@ -387,16 +398,52 @@ def _add_annots(pdf: Pdf, page_index: int, annots: list[Dictionary]) -> None:
 # ── tool ──────────────────────────────────────────────────────────────────────────────────
 
 
+def secret_images(params: dict[str, Any], folder: Path) -> dict[str, Path]:
+    """PNG pictures sent as job secrets (base64), written into the job folder."""
+    bag = params.get("secrets", {})
+    images = bag.get("images", {}) if isinstance(bag, dict) else {}
+    if not isinstance(images, dict):
+        raise _bad("Invalid signature images")
+    found: dict[str, Path] = {}
+    for key, value in images.items():
+        if not isinstance(key, str) or not key.isalnum() or len(key) > 64:
+            raise _bad("Invalid signature images")
+        try:
+            data = base64.b64decode(str(value), validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise _bad("A signature image is damaged") from exc
+        if not data.startswith(b"\x89PNG\r\n\x1a\n") or len(data) > 10 * 1024 * 1024:
+            raise _bad("A signature image is damaged")
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"{key}.png"
+        path.write_bytes(data)
+        found[key] = path
+    return found
+
+
 def edit_pdf(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Edit PDF (E1)."""
+    keep = option_bool(options_dict(params), "annotations", False)
+    return _apply(params, ctx, tag="edited", keep_annotations=keep)
+
+
+def sign(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Sign PDF (F3): signatures, initials, dates and text, always part of the page."""
+    return _apply(params, ctx, tag="signed", keep_annotations=False)
+
+
+def _apply(
+    params: dict[str, Any], ctx: JobContext, *, tag: str, keep_annotations: bool
+) -> ToolResult:
     source = single_pdf_input(params)
     options = options_dict(params)
-    keep_annotations = option_bool(options, "annotations", False)
     counter = Counter()
-    tmp = ctx.temp_dir / "edited.pdf"
+    tmp = ctx.temp_dir / f"{tag}.pdf"
     work = ctx.temp_dir / "drawings"
     work.mkdir()
+    images = secret_images(params, ctx.temp_dir / "secret-images")
     with open_pdf(source, passwords_map(params)) as pdf:
-        objects = parse_objects(options.get("objects"), len(pdf.pages))
+        objects = parse_objects(options.get("objects"), len(pdf.pages), images)
         by_page: dict[int, list[EditObject]] = {}
         for obj in objects:
             by_page.setdefault(obj.page, []).append(obj)
@@ -424,7 +471,7 @@ def edit_pdf(params: dict[str, Any], ctx: JobContext) -> ToolResult:
         finally:
             for overlay in opened:
                 overlay.close()
-    final = deliver_pdf(tmp, params, source, "edited", protected=[source])
+    final = deliver_pdf(tmp, params, source, tag, protected=[source])
     stats: dict[str, Any] = {
         "objects": len(objects),
         "pages_edited": len(by_page),

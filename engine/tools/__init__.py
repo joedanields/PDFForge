@@ -35,6 +35,7 @@ _TARGETS: dict[str, str] = {
     "remove-pages": "organize:remove_pages",
     "repair": "optimize:repair",
     "rotate": "organize:rotate",
+    "sign": "editor:sign",
     "split": "organize:split",
     "text-to-pdf": "to_pdf:text_to_pdf",
     "unlock": "security:unlock",
