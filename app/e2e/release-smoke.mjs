@@ -55,6 +55,30 @@ const JOBS = {
   "pdf-to-pdfa": { inputs: [f("annual.pdf")] },
   repair: { inputs: [f("damaged.pdf")] },
   ocr: { inputs: [f("invoice-scan.pdf")], options: { languages: "eng+tam" } },
+  // Phase 3: page editor, crop, true redaction, compare.
+  "edit-pdf": {
+    inputs: [f("mixed.pdf")],
+    options: {
+      objects: [
+        { page: 0, kind: "rect", x: 0.1, y: 0.1, w: 0.2, h: 0.1, fill: "#E03131", stroke: null },
+        { page: 0, kind: "text", x: 0.1, y: 0.3, w: 0.5, h: 0.05, text: "Release check" },
+      ],
+    },
+  },
+  crop: { inputs: [f("mixed.pdf")], options: { mode: "auto", pages: "all", margin: 6 } },
+  redact: {
+    inputs: [f("statement.pdf")],
+    options: { areas: [{ page: 0, x: 0.1, y: 0.1, w: 0.6, h: 0.1 }], ocr: true },
+  },
+  compare: { inputs: [f("contract v1.pdf"), f("contract v2.pdf")] },
+  sign: {
+    inputs: [f("mixed.pdf")],
+    options: {
+      objects: [{ page: 0, kind: "image", x: 0.6, y: 0.8, w: 0.25, h: 0.08, image: "secret:s1" }],
+    },
+    // A signature picture is created in the page (canvas) right before the job runs.
+    signature: true,
+  },
 };
 
 const browser = await chromium.connectOverCDP("http://127.0.0.1:9222");
@@ -90,6 +114,24 @@ for (const [method, params] of Object.entries(JOBS)) {
   const id = `job-release-${method}-${Date.now()}`;
   const started = Date.now();
   const before = (await invoke("list_recents", { limit: 1 }))[0]?.createdAt ?? 0;
+  if (params.signature) {
+    const png = await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 300;
+      canvas.height = 100;
+      const ctx = canvas.getContext("2d");
+      ctx.strokeStyle = "#1D3D8F";
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(10, 70);
+      ctx.lineTo(120, 20);
+      ctx.lineTo(290, 80);
+      ctx.stroke();
+      return canvas.toDataURL("image/png").split(",")[1];
+    });
+    delete params.signature;
+    params.secrets = { images: { s1: png } };
+  }
   await invoke("run_job", { id, method, params });
   let recent = null;
   while (Date.now() - started < 120_000) {

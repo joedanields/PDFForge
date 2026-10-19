@@ -1,11 +1,95 @@
 # Progress log
 
-> Autonomous run started 2026-10-18. Final summary for the owner will be written here at the top.
+> Autonomous run 2026-10-18 → 2026-10-19.
+
+## Summary for the owner (autonomous run 2026-10-18 → 2026-10-19)
+
+**Done: Phases 1, 2 and 3.** 30 product tools are available (Phase 3 exit: "~29 tools");
+the remaining four tiles are Phase 4 / v2 by plan (Fill forms, Summarize, Translate, Chat).
+
+- **Phase 1 (core PDF tools)**: Merge, Split, Remove, Extract, Organize, Rotate, Compress,
+  Image → PDF, PDF → Image, Protect, Unlock, Page numbers, Watermark; notices; installer.
+- **Phase 2 (conversions)**: Word / PowerPoint / Excel → PDF (bundled LibreOffice),
+  PDF → Word / Excel / PowerPoint / Text (own AGPL-free converter), HTML → PDF, Text/Markdown →
+  PDF, PDF → PDF/A (2b/3b, veraPDF-validated on the dev machine), Repair, OCR (bundled Tesseract,
+  English + Tamil + Hindi, more via Settings). `scripts/fetch-vendor.ps1` downloads, SHA-256
+  verifies and trims LibreOffice and Tesseract.
+- **Phase 3 (editing & security)**: built-in viewer + "Open with PDFForge" for .pdf, Edit PDF,
+  Sign PDF (DPAPI-encrypted saved signatures), Crop, Redact (true redaction), Compare.
+
+**Blocked / not done** (nothing was skipped as blocked; these are open items):
+- Auto-update (v1.0 exit item) — needs an update server and signing keys from you (D-034).
+- Cryptographic certificate signing (F3 "Could") and Fill forms (E5) — Phase 4 per roadmap.
+- HTML → PDF from a URL (C5 footnote) — not offered; local files only (D-023).
+- PDF/A-1b — not offered (needs ICC v2 + no transparency) (D-024).
+
+**Decisions** — every entry in [DECISIONS.md](DECISIONS.md) (question → see the file for the choice and reason):
+
+  - **D-001** — "Commit Phase 0 as one clean initial commit" vs. the eight Phase 0.1–0.8 commits requested the day before
+  - **D-002** — How to apply the per-job memory cap (05 S6) when jobs ran as threads
+  - **D-003** — What happens to password/permission protection of inputs
+  - **D-004** — Single-file vs. many files for Phase 1 single-document tools
+  - **D-005** — Where multi-file results go (Split, Extract "one per page", PDF→Image, Image→PDF "one per image")
+  - **D-006** — HEIC support (C1) without GPL code
+  - **D-007** — Fonts for page numbers / watermarks
+  - **D-008** — Compress when the result is not smaller (02 B1 "keep the original")
+  - **D-009** — Compress algorithm without Ghostscript
+  - **D-010** — Commit authorship pattern
+  - **D-011** — Contents of THIRD_PARTY_NOTICES.txt
+  - **D-012** — Which LibreOffice to bundle, and how to unpack it without installing it
+  - **D-013** — Where the Tesseract binaries come from
+  - **D-014** — LibreOffice took 12–20 s per document
+  - **D-015** — Commit granularity in Phase 2
+  - **D-016** — File names of format conversions
+  - **D-017** — Excel → PDF "fit sheet to page width" and "active sheet only"
+  - **D-018** — PDF → Excel modes (02 D4: "detect tables / one sheet per page / one sheet total")
+  - **D-019** — PDF → PowerPoint layout (02 D3 "image + extracted text boxes")
+  - **D-020** — PDF → Text format
+  - **D-021** — Text → PDF with characters outside the standard fonts
+  - **D-022** — What counts as "recovered" in Repair (02 B2)
+  - **D-023** — HTML → PDF engine (02 C5: "Chromium (WebView2 print) / wkhtmltopdf alternative")
+  - **D-024** — PDF/A without Ghostscript (02 D5, 09 §3: "pikepdf + veraPDF validation, or skipped")
+  - **D-025** — Job start-up got slower with every Phase 2 tool (each job is a fresh worker process, D-002)
+  - **D-026** — OCR without OCRmyPDF / Ghostscript
+  - **D-027** — OCR languages and the "language pack manager"
+  - **D-028** — Built-in viewer and "Open with PDFForge" (02 §J Should, 06 §4: association with the viewer)
+  - **D-029** — How Edit PDF stores what the user adds (02 E1: "flattened into page content (option: keep as annotations)")
+  - **D-030** — How signatures are made, stored and applied (02 F3)
+  - **D-031** — What Crop does to the content outside the area (02 E4)
+  - **D-032** — True redaction without MuPDF (02 F4: "underlying text/images must be removed … verified by test")
+  - **D-033** — What Compare compares and produces (02 F5, 04 §2.7)
+  - **D-034** — Auto-update for v1.0 (08 Phase 3 exit, 02 §J "opt-in")
+
+Most important for you: **D-013** (the Tesseract build contains GPL-2.0 JBIG-KIT and LGPL
+libiconv — fine as a separate program but needs a source offer, see 09 §4), **D-032** (redacted
+pages become pictures), **D-034** (auto-update deferred), **D-010** (commit authorship pattern).
+
+**Installer**: `app\src-tauri\target\release\bundle\nsis\PDFForge_0.1.0_x64-setup.exe` —
+184.6 MB (176.1 MiB), includes LibreOffice and Tesseract (unsigned build; set `PDFFORGE_SIGN_THUMBPRINT` to sign).
+
+**Run and test the latest build** (PowerShell, repository root):
+
+```powershell
+# full rebuild from scratch (vendor download/verify, engine freeze, installer)
+.\scripts\build-all.ps1
+# all quality gates (engine lint/types/tests, UI lint/types/tests, Rust fmt/clippy/tests)
+bash scripts/check.sh
+# smoke-test the built app: start it with a debug port, then drive it
+cd engine; uv run python -m tests.make_e2e_inputs $env:TEMP\pdfforge-e2e; cd ..
+$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=9222"
+Start-Process .\app\src-tauri\target\release\pdfforge.exe
+cd app; node e2e/release-smoke.mjs $env:TEMP\pdfforge-e2e      # Echo + all 30 tools
+# or the full UI smoke against the dev app (pnpm tauri dev with the same debug port):
+node e2e/smoke.mjs $env:TEMP\pdfforge-e2e
+```
+
+Last verified: 2026-10-19 — full gates green (443 pytest, 91 vitest, 26 Rust tests); release smoke in the built exe passed for Echo + all 30 tools; full UI smoke (30 sections) passed.
+
 
 ## Now
 
-- **Current phase:** Phase 3 — Editing & security (Phases 1 and 2 done)
-- **Working on:** 3.6 Phase 3 installer, notices and release smoke
+- **Current phase:** none — Phases 1, 2 and 3 are done
+- **Working on:** Nothing — all planned phases are finished; waiting for the owner (see the summary above)
 
 ## Phase 3 — Editing & security
 
@@ -16,8 +100,8 @@
 | 3.2 Sign PDF (F3) | done | test_sign (6), Rust signatures (3), smoke `sign` | f4ba28d | type / draw / upload, initials, date, text; DPAPI-encrypted saved signatures; D-030 |
 | 3.3 Crop PDF (E4) | done | test_crop (9), smoke `crop` | e241ba6 | draw the area with corner handles, this page / all pages, auto-trim white margins; D-031 |
 | 3.4 Redact PDF (F4) — true redaction | done | test_redact (9), vitest redactSearch (4), smoke `redact` | 2aa1ce9 | redacted pages rebuilt from pixels (+ OCR); search with email/phone/PAN/Aadhaar presets; D-032 |
-| 3.5 Compare PDF (F5) | done | test_compare (6), smoke `compare` | (this commit) | word-level diff, synced panes, change list, pixel overlay, annotated report; D-033 |
-| 3.6 Phase 3 installer + release smoke (v1.0 exit) | todo | | | |
+| 3.5 Compare PDF (F5) | done | test_compare (6), smoke `compare` | 5870417 | word-level diff, synced panes, change list, pixel overlay, annotated report; D-033 |
+| 3.6 Phase 3 installer, notices, release smoke (v1.0 exit) | done | full suite + release smoke (Echo + all 31 tools in the built exe) | (this commit) | auto-update deferred to the owner (D-034); dark mode present |
 
 ## Phase 2 — Conversions (done)
 

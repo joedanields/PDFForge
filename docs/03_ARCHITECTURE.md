@@ -122,8 +122,11 @@ engine/
 │   ├── from_pdf.py        # pdf → images
 │   ├── pdf_office.py      # pdf → word, excel, powerpoint, text
 │   ├── pdfa.py            # pdf → pdf/a
-│   ├── edit.py            # page numbers, watermark (later: crop, annotations, forms)
-│   ├── security.py        # protect, unlock (later: sign, redact)
+│   ├── edit.py            # page numbers, watermark, crop
+│   ├── editor.py          # edit pdf + sign (objects in display coordinates)
+│   ├── redact.py          # true redaction (pages rebuilt from pixels)
+│   ├── compare.py         # word-level diff + annotated report
+│   ├── security.py        # protect, unlock
 │   └── debug.py           # echo self-test
 ├── utils/
 │   ├── libreoffice.py     # hardened per-run profile, short paths, kill on cancel
