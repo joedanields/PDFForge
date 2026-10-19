@@ -908,8 +908,16 @@ if (section("redact")) {
   await page.getByText("3 added").waitFor();
   ok("typed word marked too");
   await shot("redact-ready");
+  expect(
+    await page.getByLabel("Run OCR on non-redacted areas").isChecked(),
+    "OCR on non-redacted areas is on by default",
+  );
   const text = await runAndWait("Redact permanently");
   expect(text.includes("3 areas removed on 1 page"), "3 areas removed");
+  expect(
+    text.includes("rebuilt as an image") && text.includes("OCR restored searchable text"),
+    "result explains rebuilt pages and restored text",
+  );
   expect(/statement_redacted( \(\d+\))?\.pdf/.test(text), "output statement_redacted.pdf");
 }
 

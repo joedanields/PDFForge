@@ -120,6 +120,14 @@ export const en = {
   "settings.dataDir": "Data folder",
   "settings.offline": "All processing happens on this computer. No files leave your device.",
   "result.view": "View in PDFForge",
+  "result.rasterizedOne":
+    "The redacted page was rebuilt as an image, so the redacted content is gone for good.",
+  "result.rasterizedMany":
+    "{count} redacted pages were rebuilt as images, so the redacted content is gone for good.",
+  "result.rasterizedSearchable": "OCR restored searchable text outside the redacted boxes.",
+  "result.rasterizedNotSearchable":
+    "Text on these pages can't be searched or copied. Run OCR to restore searchable text outside the redacted boxes.",
+  "result.runOcr": "Run OCR on non-redacted areas",
   "viewer.title": "View a PDF",
   "viewer.empty": "Open a PDF to read it, search its text and pass it to any tool.",
   "viewer.open": "Open PDF…",

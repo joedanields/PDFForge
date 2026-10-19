@@ -3,9 +3,11 @@ import {
   Eye,
   FileText,
   FolderOpen,
+  ImageIcon,
   Info,
   Lock,
   RotateCcw,
+  ScanText,
   TriangleAlert,
 } from "lucide-react";
 import { useState } from "react";
@@ -47,7 +49,10 @@ export function ResultCard({ result, summary = null, combined = false, onStartOv
   const noOutputReason = typeof stats.no_output_reason === "string" ? stats.no_output_reason : null;
   const protectedInputs = num(stats.protected_inputs) ?? 0;
   const echo = typeof stats.echo === "string" ? stats.echo : null;
+  const rasterized = num(stats.rasterized_pages) ?? 0;
+  const searchable = stats.searchable === true;
   const protectAvailable = getTool("protect")?.status === "available";
+  const ocrAvailable = getTool("ocr")?.status === "available";
 
   const run = (action: (path: string) => Promise<unknown>, path: string | undefined) => {
     if (!path) return;
@@ -133,6 +138,31 @@ export function ResultCard({ result, summary = null, combined = false, onStartOv
           .filter(Boolean)
           .join(" · ")}
       </p>
+
+      {rasterized > 0 && (
+        <div
+          className="mt-4 flex w-full items-start gap-2 rounded-md bg-surface-2 px-4 py-3 text-left text-sm"
+          data-testid="result-rasterized"
+        >
+          <ImageIcon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+          <span className="flex-1">
+            {t(rasterized === 1 ? "result.rasterizedOne" : "result.rasterizedMany", {
+              count: rasterized,
+            })}{" "}
+            {t(searchable ? "result.rasterizedSearchable" : "result.rasterizedNotSearchable")}
+          </span>
+          {!searchable && ocrAvailable && first && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => navigate("/tool/ocr", { state: { preload: [first] } })}
+            >
+              <ScanText aria-hidden />
+              {t("result.runOcr")}
+            </Button>
+          )}
+        </div>
+      )}
 
       {protectedInputs > 0 && (
         <div

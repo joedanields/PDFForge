@@ -749,9 +749,9 @@ export const cropOptions = z.object({
 
 export const redactOptions = z.object({
   ocr: opt.bool(
-    "Keep the rest of the page searchable",
+    "Run OCR on non-redacted areas",
     true,
-    "Redacted pages are rebuilt as pictures; OCR adds their remaining text back.",
+    "Redacted pages are rebuilt as pictures and can't be searched. OCR restores searchable text outside the black boxes.",
   ),
   languages: opt.languages("Document language", undefined, {
     showWhen: { key: "ocr", values: ["true"] },

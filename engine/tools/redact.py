@@ -199,6 +199,8 @@ def redact(params: dict[str, Any], ctx: JobContext) -> ToolResult:
         {
             "areas": len(areas),
             "pages_redacted": len(by_page),
+            # Pages rebuilt from pixels: the Result screen explains this (D-036).
+            "rasterized_pages": len(by_page),
             "searchable": ocr,
             "metadata_removed": remove_metadata,
         },

@@ -14,6 +14,7 @@ from reportlab.pdfgen import canvas
 from protocol import EngineError, ErrorCode
 from tests.fixtures import make_encrypted_pdf, make_text_pdf
 from tests.helpers import RecordingContext, sha256
+from tools.ocr import ocr
 from tools.redact import redact
 from utils.vendor import tesseract_path
 
@@ -101,6 +102,28 @@ def test_rest_of_the_page_stays_searchable(tmp_path: Path, ctx: RecordingContext
     assert "Public heading line" in text
     assert "9876543210" not in text
     assert result.stats["searchable"] is True
+    assert result.stats["rasterized_pages"] == 1
+
+
+@needs_tesseract
+def test_ocr_afterwards_restores_text_outside_the_boxes(
+    tmp_path: Path, ctx: RecordingContext
+) -> None:
+    """Result screen → "Run OCR on non-redacted areas" (D-036): the OCR tool on the output."""
+    pdf = make_statement(tmp_path / "statement.pdf")
+    result = run(ctx, pdf, [SECRET_AREA], ocr=False)
+    assert result.stats["searchable"] is False
+    assert result.stats["rasterized_pages"] == 1
+    redacted = result.outputs[0]
+    assert "Public heading line" not in page_text(redacted, 0)
+
+    ocr_result = ocr({"inputs": [str(redacted)], "options": {"languages": "eng"}}, ctx)
+    out = ocr_result.outputs[0]
+    text = page_text(out, 0)
+    assert "Public heading line" in text
+    assert "9876543210" not in text and "HIDDENSECRET" not in text
+    assert "Second page stays" in page_text(out, 1)
+    assert ocr_result.stats["skipped_pages"] == 1  # the untouched page kept its own text
 
 
 def test_rotated_page_areas_are_in_display_coordinates(
