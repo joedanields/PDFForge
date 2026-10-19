@@ -18,6 +18,7 @@ a = Analysis(
         "worker",
         "tools.debug",
         "tools.edit",
+        "tools.editor",
         "tools.from_pdf",
         "tools.ocr",
         "tools.office",

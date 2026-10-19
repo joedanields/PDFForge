@@ -42,6 +42,23 @@ def image_to_pdf_bytes(path: Path, work_dir: Path, layout: LayoutFun | None = No
     return result
 
 
+def load_image(path: Path) -> Image.Image:
+    """A picture (first frame) upright per its EXIF orientation, kept with its transparency."""
+    try:
+        with Image.open(path) as img:
+            img.load()
+            upright = ImageOps.exif_transpose(img) or img
+            return upright.copy()
+    except Image.DecompressionBombError as exc:
+        raise EngineError(
+            ErrorCode.INVALID_INPUT, f"{path.name} is too large to process", str(path)
+        ) from exc
+    except (UnidentifiedImageError, OSError, ValueError, SyntaxError) as exc:
+        raise EngineError(
+            ErrorCode.CORRUPT_FILE, f"{path.name} is not a readable image", str(path)
+        ) from exc
+
+
 def normalise_to_png(path: Path, work_stem: Path) -> list[str]:
     work_stem.parent.mkdir(parents=True, exist_ok=True)
     try:

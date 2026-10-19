@@ -81,7 +81,7 @@ export interface ToolDef {
   requiresIntelligence?: boolean;
   /** "files": file cards (default). "pages": one PDF shown as a selectable page grid.
    * "organize": page board built from one or more PDFs. */
-  layout?: "files" | "pages" | "organize";
+  layout?: "files" | "pages" | "organize" | "editor";
   /** pages layout: the page-range option that mirrors the grid selection. */
   pageSelection?: {
     option: string;
@@ -708,6 +708,14 @@ export const ocrOptions = z.object({
   ),
 });
 
+export const editPdfOptions = z.object({
+  annotations: opt.bool(
+    "Keep added objects editable",
+    false,
+    "Saves them as annotations other PDF editors can move or delete. Off: they become part of the page.",
+  ),
+});
+
 export const echoOptions = z.object({
   message: opt.text("Message", "Hello from PDFForge", "Returned by the engine unchanged."),
   steps: opt.int("Steps", 1, 50, 10),
@@ -1305,18 +1313,28 @@ export const TOOLS: readonly ToolDef[] = [
   },
 
   // ── E. Edit ───────────────────────────────────────────────────────────────────────────────
-  soon({
+  {
     id: "edit-pdf",
     ref: "E1",
     name: "Edit PDF",
-    description: "Add text, images, shapes, drawings and notes to your pages.",
+    description: "Add text, pictures, shapes, drawings and notes to any page.",
     category: "edit",
     icon: PenLine,
     accepts: onePdf,
+    optionsSchema: editPdfOptions,
+    status: "available",
     priority: "should",
     phase: 3,
-    keywords: ["annotate", "draw", "write"],
-  }),
+    engineMethod: "edit-pdf",
+    actionLabel: "Save changes",
+    keywords: ["annotate", "draw", "text box", "add image", "shapes", "comment", "sticky note"],
+    layout: "editor",
+    summary: (s) => {
+      if (typeof s.objects !== "number") return null;
+      const what = `${s.objects} ${s.objects === 1 ? "object" : "objects"} added`;
+      return s.annotations === true ? `${what} as editable annotations` : what;
+    },
+  },
   {
     id: "page-numbers",
     ref: "E2",

@@ -38,6 +38,7 @@ const AVAILABLE = [
   "html-to-pdf",
   "pdf-to-pdfa",
   "ocr",
+  "edit-pdf",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -776,6 +777,44 @@ if (section("viewer")) {
   await page.getByRole("button", { name: "Rotate PDF", exact: true }).click();
   await tile(5).waitFor({ timeout: 30_000 });
   ok("Use in a tool → Rotate PDF with the file loaded");
+}
+
+if (section("edit")) {
+  console.log("Edit PDF");
+  await go("#/tool/edit-pdf");
+  await addFiles("mixed.pdf");
+  const canvas = page.getByTestId("editor-canvas");
+  await canvas.waitFor({ timeout: 30_000 });
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("editor canvas has no size");
+  const at = (u, v) => [box.x + u * box.width, box.y + v * box.height];
+  const dragTo = async (from, to) => {
+    await page.mouse.move(...at(...from));
+    await page.mouse.down();
+    await page.mouse.move(...at(...to), { steps: 8 });
+    await page.mouse.up();
+  };
+  await page.getByRole("button", { name: "Rectangle", exact: true }).click();
+  await dragTo([0.1, 0.1], [0.4, 0.2]);
+  await page.getByText("1 added").waitFor();
+  ok("rectangle drawn by dragging");
+  await page.getByRole("button", { name: "Text box", exact: true }).click();
+  await page.mouse.click(...at(0.1, 0.4));
+  await page.getByLabel("Text", { exact: true }).fill("Checked by PDFForge");
+  await page.getByText("Checked by PDFForge").first().waitFor();
+  ok("text box placed and typed");
+  await page.getByRole("button", { name: "Pen", exact: true }).click();
+  await dragTo([0.5, 0.6], [0.8, 0.7]);
+  await page.getByText("3 added").waitFor();
+  await page.getByRole("button", { name: "Undo (Ctrl+Z)" }).click();
+  await page.getByText("2 added").waitFor();
+  await page.getByRole("button", { name: "Redo (Ctrl+Y)" }).click();
+  await page.getByText("3 added").waitFor();
+  ok("undo / redo");
+  await shot("edit-ready");
+  const text = await runAndWait("Save changes");
+  expect(text.includes("3 objects added"), "3 objects saved into the page");
+  expect(/mixed_edited( \(\d+\))?\.pdf/.test(text), "output mixed_edited.pdf");
 }
 
 if (!only || only.has("echo") || echoOnly) {

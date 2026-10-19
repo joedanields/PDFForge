@@ -6,6 +6,7 @@ import { DropZone } from "@/components/DropZone";
 import { FileList } from "@/components/FileList";
 import { OptionsForm } from "@/components/OptionsForm";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
+import { EditorBoard } from "@/components/editor/EditorBoard";
 import { OrganizeBoard, type OrganizePlan } from "@/components/OrganizeBoard";
 import { PagesPanel } from "@/components/PagesPanel";
 import { ProgressOverlay } from "@/components/ProgressOverlay";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { JobError, api, isTauri, runJob, type RunningJob } from "@/engine/client";
 import { ERROR_TEXT, type DoneEvent, type ErrorEvent } from "@/engine/types";
 import { t } from "@/i18n";
+import { type EditObject, toEngine as editorToEngine } from "@/lib/editor";
 import { fileKey, sortByDate, sortByName, type InputFile } from "@/lib/files";
 import { parsePageSet } from "@/lib/pageRanges";
 import { useAppStore } from "@/lib/store";
@@ -125,6 +127,8 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   const pageTool = tool.layout === "pages";
   const organizeTool = tool.layout === "organize";
   const [organizePlan, setOrganizePlan] = useState<OrganizePlan | null>(null);
+  const editorTool = tool.layout === "editor";
+  const [editorObjects, setEditorObjects] = useState<EditObject[]>([]);
   const editing = phase.kind === "edit";
 
   const patchFile = useCallback((key: string, patch: Partial<InputFile>) => {
@@ -297,6 +301,9 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
       blocker = tool.check(parsed.data, { pageCount, selectedCount });
     }
   }
+  if (!blocker && editorTool && files.length > 0 && editorObjects.length === 0) {
+    blocker = t("editor.empty");
+  }
   if (!blocker && organizeTool && files.length > 0 && !organizePlan?.pages.length) {
     blocker = t("organize.empty");
   }
@@ -375,7 +382,10 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
       return;
     }
     const { options: plain, secrets } = splitSecrets(tool.optionsSchema, parsed.data);
-    const engineOptions = tool.toEngine ? tool.toEngine(plain) : plain;
+    const converted = tool.toEngine ? tool.toEngine(plain) : plain;
+    const engineOptions = editorTool
+      ? { ...converted, objects: editorObjects.map(editorToEngine) }
+      : converted;
     await execute(tool.engineMethod, {
       options: engineOptions,
       ...(Object.keys(secrets).length > 0 && { secrets }), // never stored in history
@@ -472,6 +482,14 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
               disabled={!editing}
             />
           )}
+          {editorTool && files[0]?.status === "ready" && (
+            <EditorBoard
+              key={files[0].key}
+              file={files[0]}
+              disabled={!editing}
+              onChange={setEditorObjects}
+            />
+          )}
           {organizeTool && files.some((f) => f.status === "ready") && (
             <OrganizeBoard
               files={files}
@@ -483,7 +501,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
           )}
           {needsFiles &&
             files.length > 0 &&
-            !(pageTool && files[0]?.status === "ready") &&
+            !((pageTool || editorTool) && files[0]?.status === "ready") &&
             !(organizeTool && files.every((f) => f.status === "ready")) && (
               <>
                 <FileList
@@ -497,7 +515,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
                   onSortByName={() => setFiles(sortByName)}
                   onSortByDate={() => setFiles(sortByDate)}
                 />
-                {files.length < tool.accepts.max && !pageTool && !organizeTool && (
+                {files.length < tool.accepts.max && !pageTool && !organizeTool && !editorTool && (
                   <DropZone
                     compact
                     over={over}

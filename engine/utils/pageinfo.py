@@ -62,3 +62,39 @@ def displayed_size(page: Page) -> tuple[float, float]:
 def is_landscape(page: Page) -> bool:
     w, h = displayed_size(page)
     return w > h
+
+
+Matrix = tuple[float, float, float, float, float, float]
+
+
+def display_matrix(page: Page) -> Matrix:
+    """Map *display* space (points, origin bottom-left of the page as shown, after /Rotate and
+    within the CropBox) to the page's default user space: ``X = a*x + c*y + e``,
+    ``Y = b*x + d*y + f`` — the matrix viewers apply when they rotate a page for display.
+    """
+    x0, y0, x1, y1 = visible_box(page)
+    match rotation(page):
+        case 90:
+            return (0.0, 1.0, -1.0, 0.0, x1, y0)
+        case 180:
+            return (-1.0, 0.0, 0.0, -1.0, x1, y1)
+        case 270:
+            return (0.0, -1.0, 1.0, 0.0, x0, y1)
+        case _:
+            return (1.0, 0.0, 0.0, 1.0, x0, y0)
+
+
+def apply(matrix: Matrix, x: float, y: float) -> tuple[float, float]:
+    a, b, c, d, e, f = matrix
+    return a * x + c * y + e, b * x + d * y + f
+
+
+def display_rect_to_page(
+    page: Page, rect: tuple[float, float, float, float]
+) -> tuple[float, float, float, float]:
+    """A display-space rectangle (x0, y0, x1, y1; points, origin bottom-left) in user space."""
+    matrix = display_matrix(page)
+    corners = [apply(matrix, x, y) for x in (rect[0], rect[2]) for y in (rect[1], rect[3])]
+    xs = [c[0] for c in corners]
+    ys = [c[1] for c in corners]
+    return min(xs), min(ys), max(xs), max(ys)
