@@ -1,7 +1,8 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { ArrowLeft, CircleAlert, Copy, Info } from "lucide-react";
+import { ArrowLeft, CircleAlert, Copy, FolderPlus, Info } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { BatchView } from "@/components/BatchView";
 import { DropZone } from "@/components/DropZone";
 import { FileList } from "@/components/FileList";
 import { OptionsForm } from "@/components/OptionsForm";
@@ -16,8 +17,11 @@ import { PagesPanel } from "@/components/PagesPanel";
 import { ProgressOverlay } from "@/components/ProgressOverlay";
 import { ResultCard } from "@/components/ResultCard";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { JobError, api, isTauri, runJob, type RunningJob } from "@/engine/client";
 import { ERROR_TEXT, type DoneEvent, type ErrorEvent } from "@/engine/types";
+import { BATCH_MAX, type BatchHandle, type BatchItem, runBatch } from "@/lib/batch";
 import { t } from "@/i18n";
 import {
   type CropBox,
@@ -132,19 +136,28 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   useEffect(() => {
     filesRef.current = files;
   }, [files]);
+  // Batch mode (docs/02 §H): many files, one job each, same options; plain file list.
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchItems, setBatchItems] = useState<BatchItem[] | null>(null);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchCancelling, setBatchCancelling] = useState(false);
+  const batchRef = useRef<BatchHandle | null>(null);
+  const batchParamsRef = useRef<((path: string) => Record<string, unknown>) | null>(null);
+  const maxFiles = batchMode ? BATCH_MAX : tool.accepts.max;
+  const layout = batchMode ? "files" : (tool.layout ?? "files");
   const needsFiles = tool.accepts.max > 0;
-  const pageTool = tool.layout === "pages";
-  const organizeTool = tool.layout === "organize";
+  const pageTool = layout === "pages";
+  const organizeTool = layout === "organize";
   const [organizePlan, setOrganizePlan] = useState<OrganizePlan | null>(null);
-  const cropTool = tool.layout === "crop";
+  const cropTool = layout === "crop";
   const [cropBox, setCropBox] = useState<CropBox>(DEFAULT_CROP_BOX);
   const [cropPage, setCropPage] = useState(0);
-  const signTool = tool.layout === "sign";
-  const redactTool = tool.layout === "redact";
-  const editorTool = tool.layout === "editor" || signTool || redactTool;
+  const signTool = layout === "sign";
+  const redactTool = layout === "redact";
+  const editorTool = layout === "editor" || signTool || redactTool;
   const [editorObjects, setEditorObjects] = useState<EditObject[]>([]);
   const [signImages, setSignImages] = useState<Record<string, string>>({});
-  const editing = phase.kind === "edit";
+  const editing = phase.kind === "edit" && batchItems === null;
 
   const patchFile = useCallback((key: string, patch: Partial<InputFile>) => {
     setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, ...patch } : f)));
@@ -183,7 +196,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
       if (!editing) return;
       const accepted = paths.filter((p) => acceptsFile(tool, p));
       const rejected = paths.filter((p) => !acceptsFile(tool, p));
-      const room = tool.accepts.max - filesRef.current.length;
+      const room = maxFiles - filesRef.current.length;
       const taken = accepted.slice(0, Math.max(0, room));
       setNotice(
         rejected.length > 0
@@ -192,7 +205,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
               text: t("tool.rejected", { names: rejected.map(fileName).join(", ") }),
             }
           : accepted.length > taken.length
-            ? { tone: "danger", text: t("tool.tooMany", { count: tool.accepts.max }) }
+            ? { tone: "danger", text: t("tool.tooMany", { count: maxFiles }) }
             : null,
       );
       if (taken.length === 0) return;
@@ -210,7 +223,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
       setFiles((prev) => [...prev, ...added]);
       for (const file of added) void loadPreview(file);
     },
-    [editing, loadPreview, tool],
+    [editing, loadPreview, maxFiles, tool],
   );
 
   const over = useFileDrop((paths) => void addPaths(paths), needsFiles && editing);
@@ -248,6 +261,27 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     else if (typeof picked === "string") await addPaths([picked]);
   }, [addPaths, tool]);
 
+  const addFolder = useCallback(async () => {
+    if (!isTauri()) return;
+    const folder = await open({ directory: true, multiple: false });
+    if (typeof folder !== "string") return;
+    const found = await api.listFolder(folder, [...tool.accepts.extensions]);
+    if (found.length === 0) setNotice({ tone: "info", text: t("batch.folderEmpty") });
+    else await addPaths(found);
+  }, [addPaths, tool]);
+
+  const toggleBatch = (on: boolean) => {
+    setBatchMode(on);
+    if (on) return;
+    // Back to one file: keep the first, drop the rest.
+    setFiles((prev) => {
+      for (const f of prev.slice(tool.accepts.max))
+        if (f.thumbnail) URL.revokeObjectURL(f.thumbnail);
+      return prev.slice(0, tool.accepts.max);
+    });
+    clearPageSelections();
+  };
+
   // Page selections belong to one document: clear them when the document goes away.
   const clearPageSelections = useCallback(() => {
     const pageKeys = describeOptions(tool.optionsSchema)
@@ -269,6 +303,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   const startOver = () => {
     for (const f of filesRef.current) if (f.thumbnail) URL.revokeObjectURL(f.thumbnail);
     setFiles([]);
+    setBatchItems(null);
     setNotice(null);
     clearPageSelections();
     setPhase({ kind: "edit" });
@@ -279,13 +314,14 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     () => () => {
       for (const f of filesRef.current) if (f.thumbnail) URL.revokeObjectURL(f.thumbnail);
       void jobRef.current?.cancel();
+      batchRef.current?.cancel();
     },
     [],
   );
 
   // ── validation ─────────────────────────────────────────────────────────────────────────
   const parsed = tool.optionsSchema.safeParse(options);
-  const pageCount = files[0]?.pages ?? null;
+  const pageCount = batchMode ? null : (files[0]?.pages ?? null);
   let blocker: string | null = null;
   if (needsFiles && files.length < tool.accepts.min) {
     blocker = t("tool.needMore", { count: tool.accepts.min });
@@ -425,13 +461,71 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
               pages: converted.apply === "current" ? String(cropPage + 1) : "all",
             }
           : converted;
-    await execute(tool.engineMethod, {
+    const paramsFor = (inputs: string[]) => ({
       options: engineOptions,
       ...(Object.keys(secrets).length > 0 && { secrets }), // never stored in history
-      ...(needsFiles && { inputs: files.map((f) => f.path), passwords }),
+      ...(needsFiles && {
+        inputs,
+        passwords: Object.fromEntries(
+          Object.entries(passwords).filter(([path]) => inputs.includes(path)),
+        ),
+      }),
       ...(!needsFiles && engineOptions),
       ...(outputDir && { output_dir: outputDir }),
     });
+    if (batchMode) {
+      batchParamsRef.current = (path) => paramsFor([path]);
+      startBatch(
+        files.map((f) => ({
+          key: f.key,
+          path: f.path,
+          name: f.name,
+          state: "queued",
+          percent: 0,
+          outputs: [],
+        })),
+      );
+      return;
+    }
+    await execute(tool.engineMethod, paramsFor(files.map((f) => f.path)));
+  };
+
+  const patchBatch = (key: string, patch: Partial<BatchItem>) =>
+    setBatchItems((prev) => prev?.map((i) => (i.key === key ? { ...i, ...patch } : i)) ?? prev);
+
+  /** Run (or re-run) the given items; the others keep their state. */
+  const startBatch = (items: BatchItem[], keep: BatchItem[] = []) => {
+    const method = tool.engineMethod;
+    const paramsFor = batchParamsRef.current;
+    if (!method || !paramsFor) return;
+    const order = new Map([...keep, ...items].map((i) => [i.key, i]));
+    setBatchItems(files.map((f) => order.get(f.key)).filter((i): i is BatchItem => !!i));
+    setBatchRunning(true);
+    setBatchCancelling(false);
+    const handle = runBatch(
+      items,
+      (path, onProgress) => runJob(method, paramsFor(path), (p) => onProgress(p.percent)),
+      patchBatch,
+    );
+    batchRef.current = handle;
+    void handle.finished.then(() => {
+      batchRef.current = null;
+      setBatchRunning(false);
+    });
+  };
+
+  const retryFailed = () => {
+    if (!batchItems) return;
+    const retry = (i: BatchItem) => i.state === "failed" || i.state === "cancelled";
+    startBatch(
+      batchItems.filter(retry).map((i) => ({ ...i, state: "queued" as const, percent: 0 })),
+      batchItems.filter((i) => !retry(i)),
+    );
+  };
+
+  const cancelBatch = () => {
+    setBatchCancelling(true);
+    batchRef.current?.cancel();
   };
 
   const cancel = () => {
@@ -458,6 +552,23 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [needsFiles, selectFiles]);
+
+  if (batchItems) {
+    return (
+      <PageShell tool={tool} title={tool.name}>
+        <BatchView
+          title={t("batch.running", { tool: tool.name })}
+          items={batchItems}
+          running={batchRunning}
+          cancelling={batchCancelling}
+          onCancel={cancelBatch}
+          onRetryFailed={retryFailed}
+          onStartOver={startOver}
+          summary={tool.summary}
+        />
+      </PageShell>
+    );
+  }
 
   if (phase.kind === "done") {
     return (
@@ -517,9 +628,17 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
           {needsFiles && files.length === 0 && (
             <DropZone
               over={over}
-              acceptedLabel={tool.accepts.label}
+              acceptedLabel={
+                batchMode ? t("batch.accepted", { count: BATCH_MAX }) : tool.accepts.label
+              }
               onSelect={() => void selectFiles()}
             />
+          )}
+          {batchMode && editing && (
+            <Button variant="secondary" size="sm" onClick={() => void addFolder()}>
+              <FolderPlus aria-hidden />
+              {t("batch.addFolder")}
+            </Button>
           )}
           {pageTool && files[0]?.status === "ready" && (
             <PagesPanel
@@ -593,7 +712,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
                   onSortByName={() => setFiles(sortByName)}
                   onSortByDate={() => setFiles(sortByDate)}
                 />
-                {files.length < tool.accepts.max &&
+                {files.length < maxFiles &&
                   !pageTool &&
                   !organizeTool &&
                   !editorTool &&
@@ -615,6 +734,23 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
         </div>
 
         <aside className="h-fit space-y-6 rounded-card border bg-surface p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+          {tool.batch && (
+            <div className="flex items-start justify-between gap-4 rounded-md bg-surface-2/60 p-3">
+              <div className="space-y-1">
+                <Label htmlFor="batch-mode">{t("batch.toggle")}</Label>
+                <p id="batch-mode-help" className="text-xs text-text-muted">
+                  {t("batch.toggleHelp")}
+                </p>
+              </div>
+              <Switch
+                id="batch-mode"
+                checked={batchMode}
+                onCheckedChange={toggleBatch}
+                disabled={!editing}
+                aria-describedby="batch-mode-help"
+              />
+            </div>
+          )}
           <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
             {t("tool.options")}
           </h2>

@@ -172,6 +172,7 @@ pub fn run() {
             commands::open_licenses_folder,
             commands::read_input_file,
             commands::file_stats,
+            commands::list_folder,
             launch::take_open_requests,
             ocr::ocr_languages,
             signatures::list_signatures,

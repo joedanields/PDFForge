@@ -968,6 +968,29 @@ if (!only || only.has("echo") || echoOnly) {
   );
 }
 
+if (section("batch")) {
+  console.log("Batch mode");
+  await go("#/tool/compress");
+  await page.getByLabel("Batch mode").click();
+  await page.getByText("Up to 500 files").waitFor();
+  await addFiles("statement.pdf", "contract v1.pdf", "contract v2.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 3);
+  ok("three files in one compress batch");
+  await page.getByRole("button", { name: "Compress PDF", exact: true }).click();
+  const counts = page.getByTestId("batch-counts");
+  await counts.filter({ hasText: "3 of 3 finished" }).waitFor({ timeout: 90_000 });
+  const text = await counts.innerText();
+  expect(text.includes("3 done · 0 failed"), "all three files done");
+  expect(
+    (await page.locator('li[data-state="done"]').count()) === 3,
+    "per-file status list shows three done rows",
+  );
+  await shot("batch-result");
+  await page.getByRole("button", { name: "Start over" }).click();
+  await page.getByRole("button", { name: "Select files" }).waitFor();
+  ok("start over returns to the drop zone");
+}
+
 if (section("settings")) {
   console.log("Settings");
   await go("#/settings");

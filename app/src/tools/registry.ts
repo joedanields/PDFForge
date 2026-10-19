@@ -97,6 +97,8 @@ export interface ToolDef {
   toEngine?: (options: Record<string, unknown>) => Record<string, unknown>;
   /** Extra blocker message before Run (e.g. "can't remove every page"). */
   check?: (options: Record<string, unknown>, ctx: CheckContext) => string | null;
+  /** Single-file tool that can run on many files one by one (batch mode, docs/02 §H). */
+  batch?: boolean;
   /** Files that cannot be previewed are still accepted (Repair works on damaged PDFs). */
   acceptsDamaged?: boolean;
   /** One-line, tool-specific result summary built from the job's stats. */
@@ -803,6 +805,7 @@ export const TOOLS: readonly ToolDef[] = [
   },
   {
     id: "split",
+    batch: true,
     ref: "A2",
     name: "Split PDF",
     description: "Break a PDF into parts by page ranges, fixed size, file size or bookmarks.",
@@ -841,6 +844,7 @@ export const TOOLS: readonly ToolDef[] = [
   },
   {
     id: "remove-pages",
+    batch: true,
     ref: "A3",
     name: "Remove Pages",
     description: "Delete the pages you don't need and keep the rest.",
@@ -867,6 +871,7 @@ export const TOOLS: readonly ToolDef[] = [
   },
   {
     id: "extract-pages",
+    batch: true,
     ref: "A4",
     name: "Extract Pages",
     description: "Pull selected pages out into a new PDF or one file per page.",
@@ -915,6 +920,7 @@ export const TOOLS: readonly ToolDef[] = [
   },
   {
     id: "rotate",
+    batch: true,
     ref: "A6",
     name: "Rotate PDF",
     description: "Turn all or selected pages by 90°, 180° or 270° without quality loss.",
@@ -952,6 +958,7 @@ export const TOOLS: readonly ToolDef[] = [
   // ── B. Optimize ───────────────────────────────────────────────────────────────────────────
   {
     id: "compress",
+    batch: true,
     ref: "B1",
     name: "Compress PDF",
     description: "Shrink file size for email and upload, with a before/after comparison.",
@@ -1153,6 +1160,7 @@ export const TOOLS: readonly ToolDef[] = [
   },
   {
     id: "html-to-pdf",
+    batch: true,
     ref: "C5",
     name: "HTML to PDF",
     description: "Save a local web page as a PDF with your page size and margins.",
@@ -1215,6 +1223,7 @@ export const TOOLS: readonly ToolDef[] = [
   // ── D. Convert from PDF ───────────────────────────────────────────────────────────────────
   {
     id: "pdf-to-image",
+    batch: true,
     ref: "D1",
     name: "PDF to Image",
     description: "Export pages as JPG or PNG, or pull out the embedded pictures.",
@@ -1393,6 +1402,7 @@ export const TOOLS: readonly ToolDef[] = [
   },
   {
     id: "page-numbers",
+    batch: true,
     ref: "E2",
     name: "Add Page Numbers",
     description: "Number pages with your choice of position, format and style.",
@@ -1418,6 +1428,7 @@ export const TOOLS: readonly ToolDef[] = [
   },
   {
     id: "watermark",
+    batch: true,
     ref: "E3",
     name: "Add Watermark",
     description: "Stamp text or an image over or under your pages.",
@@ -1498,6 +1509,7 @@ export const TOOLS: readonly ToolDef[] = [
   // ── F. Security ───────────────────────────────────────────────────────────────────────────
   {
     id: "protect",
+    batch: true,
     ref: "F1",
     name: "Protect PDF",
     description: "Add a password and control printing, copying and editing.",
@@ -1530,6 +1542,7 @@ export const TOOLS: readonly ToolDef[] = [
   },
   {
     id: "unlock",
+    batch: true,
     ref: "F2",
     name: "Unlock PDF",
     description: "Remove a password you know, or lift owner restrictions.",

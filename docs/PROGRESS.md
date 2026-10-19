@@ -88,8 +88,16 @@ Last verified: 2026-10-19 — full gates green (443 pytest, 91 vitest, 26 Rust t
 
 ## Now
 
-- **Current phase:** none — Phases 1, 2 and 3 are done
-- **Working on:** Nothing — all planned phases are finished; waiting for the owner (see the summary above)
+- **Current phase:** Phase 4 — Power features (after the review follow-ups)
+- **Working on:** Phase 4 tools in roadmap order
+
+## Phase 4 — Power features + review follow-ups (run 2026-10-19)
+
+| Item | Status | Tests | Commit | Notes |
+|------|--------|-------|--------|-------|
+| 3.7 Licensing compliance: source archives, written offer, licences folder | done | test_licenses (3) | 9e3fc2b | JBIG-KIT + libiconv source shipped in `licenses\source`; contact address left for the owner; D-035 |
+| 3.8 Redaction UX: rebuilt-page explanation, "Run OCR on non-redacted areas" | done | test_redact (+1), vitest ResultCard (3), smoke `redact` | ee8ce25 | D-036 |
+| 4.1 Batch mode (H) | done | vitest batch (3), Rust list_folder (1), smoke `batch` | (this commit) | one job per file, 2 at a time, per-file status, retry failed, add a folder; D-037 |
 
 ## Phase 3 — Editing & security
 

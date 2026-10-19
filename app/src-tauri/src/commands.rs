@@ -239,9 +239,52 @@ pub fn file_stats(paths: Vec<String>) -> Vec<FileStat> {
         .collect()
 }
 
+/// Files directly inside `folder` whose extension is one of `extensions` (case-insensitive),
+/// sorted by name: batch mode's "Add a folder" (docs/02 §H). Sub-folders are not searched.
+#[tauri::command]
+pub fn list_folder(folder: String, extensions: Vec<String>) -> CmdResult<Vec<String>> {
+    folder_files(Path::new(&folder), &extensions)
+}
+
+fn folder_files(folder: &Path, extensions: &[String]) -> CmdResult<Vec<String>> {
+    let entries = std::fs::read_dir(folder).map_err(|_| "The folder could not be read.".to_string())?;
+    let mut files: Vec<String> = entries
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .map(|e| e.path())
+        .filter(|p| {
+            p.extension()
+                .map(|ext| {
+                    let ext = ext.to_string_lossy();
+                    extensions.iter().any(|want| want.eq_ignore_ascii_case(&ext))
+                })
+                .unwrap_or(false)
+        })
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect();
+    files.sort_by_key(|p| p.to_lowercase());
+    Ok(files)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn folder_files_filters_by_extension_and_sorts() {
+        let dir = tempfile::tempdir().unwrap();
+        for name in ["b.PDF", "a.pdf", "notes.txt", "c.pdf.exe"] {
+            std::fs::write(dir.path().join(name), b"x").unwrap();
+        }
+        std::fs::create_dir(dir.path().join("sub.pdf")).unwrap();
+        let found = folder_files(dir.path(), &["pdf".to_string()]).unwrap();
+        let names: Vec<_> = found
+            .iter()
+            .map(|p| Path::new(p).file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, ["a.pdf", "b.PDF"]);
+        assert!(folder_files(&dir.path().join("missing"), &[]).is_err());
+    }
 
     #[test]
     fn readable_rejects_other_types() {

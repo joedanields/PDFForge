@@ -107,6 +107,8 @@ export const api = {
   openNotices: () => invoke<undefined>("open_notices"),
   openLicensesFolder: () => invoke<undefined>("open_licenses_folder"),
   fileStats: (paths: string[]) => invoke<FileStat[]>("file_stats", { paths }),
+  listFolder: (folder: string, extensions: string[]) =>
+    invoke<string[]>("list_folder", { folder, extensions }),
   readInputFile: (path: string) => invoke<ArrayBuffer>("read_input_file", { path }),
   listSignatures: () => invoke<SavedSignature[]>("list_signatures"),
   saveSignature: (kind: string, png: string) =>
