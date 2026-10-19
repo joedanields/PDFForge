@@ -1,4 +1,4 @@
-import { FlaskConical, ScrollText } from "lucide-react";
+import { FlaskConical, FolderOpen, ScrollText } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { OcrLanguagesSettings } from "@/components/OcrLanguagesSettings";
@@ -154,6 +154,18 @@ export function SettingsPage() {
           >
             <ScrollText aria-hidden />
             {t("settings.notices")}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={!isTauri()}
+            onClick={() =>
+              void api
+                .openLicensesFolder()
+                .catch((err: unknown) => setMessage({ tone: "error", text: String(err) }))
+            }
+          >
+            <FolderOpen aria-hidden />
+            {t("settings.licensesFolder")}
           </Button>
         </div>
         <p className="text-xs text-text-muted">{t("settings.licenceNote")}</p>

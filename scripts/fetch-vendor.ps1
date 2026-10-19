@@ -21,12 +21,12 @@
 .PARAMETER Force
   Rebuild the components even when their stamp matches.
 .PARAMETER Only
-  Limit to 'libreoffice' or 'tesseract'.
+  Limit to 'libreoffice', 'tesseract' or 'sources'.
 #>
 [CmdletBinding()]
 param(
     [switch]$Force,
-    [ValidateSet('', 'libreoffice', 'tesseract')]
+    [ValidateSet('', 'libreoffice', 'tesseract', 'sources')]
     [string]$Only = ''
 )
 
@@ -70,6 +70,23 @@ $Tessdata = [ordered]@{
 }
 # Bump when the trimming rules below change, so existing vendor folders are rebuilt.
 $TrimRevision = 3
+
+# Source code shipped in the installer for the copyleft libraries inside the Tesseract build
+# (licenses/source, docs/09 §4, D-035): upstream releases + the MSYS2 build recipe.
+$SourceArchives = [ordered]@{
+    'jbigkit-2.1.tar.gz'                  = @{
+        Url    = 'https://www.cl.cam.ac.uk/~mgk25/jbigkit/download/jbigkit-2.1.tar.gz'
+        Sha256 = 'DE7106B6BFAF495D6865C7DD7AC6CA1381BD12E0D81405EA81E7F2167263D932'
+    }
+    'mingw-w64-jbigkit-2.1-5.src.tar.zst' = @{
+        Url    = 'https://repo.msys2.org/mingw/sources/mingw-w64-jbigkit-2.1-5.src.tar.zst'
+        Sha256 = '402E264E13FFD10424D3217E83076D9E1E3AB0DB16303A33D42A4BD4CDA4088B'
+    }
+    'libiconv-1.17.tar.gz'                = @{
+        Url    = 'https://ftp.gnu.org/gnu/libiconv/libiconv-1.17.tar.gz'
+        Sha256 = '8F74213B56238C85A50A5329F77E06198771E70DD9A739779F4C02F65D971313'
+    }
+}
 
 # --- helpers -------------------------------------------------------------------------------
 function Get-Sha256([string]$path) { (Get-FileHash -Algorithm SHA256 -Path $path).Hash.ToUpperInvariant() }
@@ -244,6 +261,32 @@ function Install-Tesseract {
     Write-Host ("    vendor/tesseract: {0:N0} MB" -f (Get-FolderMB $dir)) -ForegroundColor Green
 }
 
+function Install-Sources {
+    $dir = Join-Path $vendor 'source-archives'
+    $stampValue = ($SourceArchives.Values | ForEach-Object { $_.Sha256 }) -join ' '
+    if (Test-Stamp $dir $stampValue) {
+        Write-Host 'Source archives: up to date'
+        return
+    }
+    Write-Host 'Source archives (GPL/LGPL components):' -ForegroundColor Cyan
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    $sums = @()
+    foreach ($name in $SourceArchives.Keys) {
+        $item = $SourceArchives[$name]
+        $file = Get-Verified $item.Url $name $item.Sha256
+        Copy-Item $file (Join-Path $dir $name) -Force
+        $sums += "$($item.Sha256.ToLowerInvariant())  $name"
+    }
+    # GNU's detached signature, for anyone who wants to verify libiconv independently.
+    $sig = Join-Path $dir 'libiconv-1.17.tar.gz.sig'
+    if (-not (Test-Path $sig)) {
+        & curl.exe -sSfL --retry 3 -o $sig 'https://ftp.gnu.org/gnu/libiconv/libiconv-1.17.tar.gz.sig'
+    }
+    Set-Content -Path (Join-Path $dir 'SHA256SUMS.txt') -Value $sums -Encoding ascii
+    Set-Stamp $dir $stampValue
+}
+
+if ($Only -eq '' -or $Only -eq 'sources') { Install-Sources }
 if ($Only -eq '' -or $Only -eq 'libreoffice') { Install-LibreOffice }
 if ($Only -eq '' -or $Only -eq 'tesseract') { Install-Tesseract }
 if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }

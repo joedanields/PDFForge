@@ -230,7 +230,7 @@ def rust_components() -> list[Component]:
                 shipped.add(dep["pkg"])
                 pending.append(dep["pkg"])
     components: list[Component] = []
-    for pkg_id in sorted(shipped, key=lambda i: packages[i]["name"]):
+    for pkg_id in sorted(shipped, key=lambda i: (packages[i]["name"], packages[i]["version"])):
         pkg = packages[pkg_id]
         folder = Path(pkg["manifest_path"]).parent
         texts = [
@@ -368,8 +368,9 @@ def write(components: list[Component]) -> None:
         "pdf2docx; see docs/09_LICENSING.md §3). LGPL components (img2pdf, libheif, libde265,",
         "libiconv) are used unmodified as separate libraries. LibreOffice (MPL-2.0) and Tesseract",
         "run as separate, unmodified programs; Tesseract's Windows build contains JBIG-KIT",
-        "(GPL-2.0). The source code of these components is available from the projects listed,",
-        "and on request from the PDFForge authors.",
+        "(GPL-2.0). The source code of JBIG-KIT and GNU libiconv is installed with PDFForge in",
+        "licenses\\source; the written offer for the source of every GPL/LGPL/MPL component is in",
+        "licenses\\WRITTEN_OFFER.txt (Settings -> About -> Licences and source code).",
         "",
     ]
     for part, title in PARTS.items():

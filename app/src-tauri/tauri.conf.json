@@ -63,7 +63,8 @@
     ],
     "resources": {
       "resources/engine/": "engine/",
-      "../../THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt"
+      "../../THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt",
+      "../../licenses/": "licenses/"
     },
     "windows": {
       "webviewInstallMode": { "type": "embedBootstrapper" },

@@ -1,0 +1,38 @@
+Written offer for source code
+=============================
+
+PDFForge includes, unmodified, the following components licensed under the GNU General
+Public License (GPL), the GNU Lesser General Public License (LGPL) or the Mozilla Public
+License (MPL):
+
+  Component                      Licence               Where in PDFForge
+  -----------------------------  --------------------  ----------------------------------------
+  JBIG-KIT 2.1 (libjbig)         GPL-2.0-or-later      vendor\tesseract\libjbig-0.dll
+  GNU libiconv 1.17              LGPL-2.1-or-later     vendor\tesseract\libiconv-2.dll
+  GCC runtime (libgcc, libstdc++) GPL-3.0 with GCC     vendor\tesseract\, engine\_internal\
+                                 Runtime Library
+                                 Exception 3.1
+  libheif, libde265 (pi-heif)    LGPL-3.0              engine\_internal\
+  img2pdf                        LGPL-3.0              engine\_internal\
+  LibreOffice 26.2.6             MPL-2.0               vendor\libreoffice\
+  pikepdf                        MPL-2.0               engine\_internal\
+
+The source code of JBIG-KIT and GNU libiconv is included in the "source" folder next to
+this file. The source code of the other components is published by their projects
+(see THIRD_PARTY_NOTICES.txt for each project and version).
+
+For at least three (3) years from the date you received this copy of PDFForge, the
+publisher of PDFForge will give anyone who asks a complete machine-readable copy of the
+corresponding source code of each GPL/LGPL component listed above — the exact versions,
+build scripts and patches used for the binaries shipped in this release — for no more than
+the cost of physically performing the distribution, on a medium customarily used for
+software interchange, or as a download.
+
+To request it, write to:
+
+  PDFForge — source code requests
+  <CONTACT ADDRESS — to be filled in by the publisher before distribution>
+
+Please name the PDFForge version (Settings -> About) and the component(s) you want.
+
+This offer is valid for anyone in receipt of this information.

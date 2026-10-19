@@ -5,7 +5,9 @@
       "resources/engine/": "engine/",
       "../../THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt",
       "../../vendor/libreoffice/": "vendor/libreoffice/",
-      "../../vendor/tesseract/": "vendor/tesseract/"
+      "../../vendor/tesseract/": "vendor/tesseract/",
+      "../../licenses/": "licenses/",
+      "../../vendor/source-archives/": "licenses/source/"
     }
   }
 }

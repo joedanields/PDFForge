@@ -83,7 +83,7 @@ try {
 
     # Release builds bundle vendor/ (LibreOffice, Tesseract) through an overlay config, so
     # dev builds and CI lint/test jobs do not need the ~600 MB of vendor binaries.
-    foreach ($component in @('libreoffice', 'tesseract')) {
+    foreach ($component in @('libreoffice', 'tesseract', 'source-archives')) {
         if (-not (Test-Path (Join-Path $root "vendor\$component\.pdfforge-vendor"))) {
             throw "vendor/$component missing: run scripts/fetch-vendor.ps1"
         }

@@ -169,6 +169,7 @@ pub fn run() {
             commands::open_output,
             commands::reveal_output,
             commands::open_notices,
+            commands::open_licenses_folder,
             commands::read_input_file,
             commands::file_stats,
             launch::take_open_requests,

@@ -105,6 +105,7 @@ export const api = {
   openOutput: (path: string) => invoke<undefined>("open_output", { path }),
   revealOutput: (path: string) => invoke<undefined>("reveal_output", { path }),
   openNotices: () => invoke<undefined>("open_notices"),
+  openLicensesFolder: () => invoke<undefined>("open_licenses_folder"),
   fileStats: (paths: string[]) => invoke<FileStat[]>("file_stats", { paths }),
   readInputFile: (path: string) => invoke<ArrayBuffer>("read_input_file", { path }),
   listSignatures: () => invoke<SavedSignature[]>("list_signatures"),

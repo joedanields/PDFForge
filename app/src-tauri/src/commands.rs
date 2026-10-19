@@ -158,6 +158,25 @@ pub fn open_notices(app: tauri::AppHandle) -> CmdResult<()> {
     tauri_plugin_opener::open_path(&path, None::<&str>).map_err(|e| e.to_string())
 }
 
+/// Open the folder with the licences, the written source offer and the shipped source
+/// archives (docs/09 §4).
+#[tauri::command]
+pub fn open_licenses_folder(app: tauri::AppHandle) -> CmdResult<()> {
+    use tauri::Manager;
+    let dir = if cfg!(debug_assertions) {
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../licenses")
+    } else {
+        app.path()
+            .resource_dir()
+            .map_err(|e| e.to_string())?
+            .join("licenses")
+    };
+    if !dir.is_dir() {
+        return Err("The licences folder is missing. Please reinstall PDFForge.".into());
+    }
+    tauri_plugin_opener::open_path(&dir, None::<&str>).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn reveal_output(db: State<'_, Arc<Db>>, path: String) -> CmdResult<()> {
     ensure_known_output(&db, &path)?;

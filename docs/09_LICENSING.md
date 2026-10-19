@@ -76,8 +76,11 @@ pdfminer.six and pypdf are used by tools and therefore shipped.
 - New dependencies are checked against this rule before they are added.
 
 ## 4. Obligations checklist
-- [x] Ship `THIRD_PARTY_NOTICES.txt` with all licenses (generated, bundled in the installer); show it in Settings → About (viewer: later phase).
-- [ ] Provide source/offer for any LGPL/MPL/AGPL components as required. **Now concrete:** LibreOffice (MPL), libiconv / img2pdf / libheif / libde265 (LGPL) and JBIG-KIT (GPL-2.0) — publish a written offer (or a source mirror) before distributing.
+- [x] Ship `THIRD_PARTY_NOTICES.txt` with all licenses (generated from the real dependency tree by `scripts/generate_notices.py`, bundled in the installer); Settings → About → *Third-party licences* opens it.
+- [x] Source / written offer for the copyleft components (D-035). The installer ships a `licenses\` folder (repo: `licenses/`, Settings → About → *Licences and source code* opens it):
+  - `licenses\source\` — JBIG-KIT 2.1 upstream tarball + the MSYS2 `mingw-w64-jbigkit-2.1-5` recipe, GNU libiconv 1.17 upstream tarball + GNU signature, `SHA256SUMS.txt` (fetched and hash-checked by `scripts/fetch-vendor.ps1` into `vendor/source-archives`);
+  - `licenses\WRITTEN_OFFER.txt` — 3-year written offer for the exact corresponding source of every GPL/LGPL/MPL component (JBIG-KIT, libiconv, GCC runtime, libheif/libde265, img2pdf, LibreOffice, pikepdf).
+  - **Owner action:** replace `<CONTACT ADDRESS …>` in `licenses/WRITTEN_OFFER.txt` with a real postal or e-mail address before distributing.
 - [ ] Privacy policy stating local-only processing (needed for any store listing).
 - [ ] EULA in the installer.
 - [ ] Unlock tool limited to files the user has the password/right to open.
