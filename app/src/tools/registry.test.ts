@@ -49,6 +49,7 @@ const IMPLEMENTED = [
   "repair",
   "html-to-pdf",
   "pdf-to-pdfa",
+  "ocr",
 ];
 
 describe("tool registry contents", () => {

@@ -11,6 +11,7 @@ import type {
   EngineStatus,
   ErrorEvent,
   FileStat,
+  OcrLanguage,
   ProgressEvent,
   RecentOutput,
   Settings,
@@ -104,6 +105,9 @@ export const api = {
   openNotices: () => invoke<undefined>("open_notices"),
   fileStats: (paths: string[]) => invoke<FileStat[]>("file_stats", { paths }),
   readInputFile: (path: string) => invoke<ArrayBuffer>("read_input_file", { path }),
+  ocrLanguages: () => invoke<OcrLanguage[]>("ocr_languages"),
+  addOcrLanguage: (path: string) => invoke<OcrLanguage[]>("add_ocr_language", { path }),
+  removeOcrLanguage: (code: string) => invoke<OcrLanguage[]>("remove_ocr_language", { code }),
 };
 
 export function onEngineStatus(cb: (status: EngineStatus) => void): Promise<UnlistenFn> {

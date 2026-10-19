@@ -69,5 +69,5 @@ files = ["main.py", "jobs.py", "protocol.py", "tools", "utils", "tests"]
 exclude = ["build/", "dist/"]
 
 [[tool.mypy.overrides]]
-module = ["img2pdf", "pypdfium2", "reportlab.*", "pdfplumber", "pi_heif", "pillow_heif"]
+module = ["img2pdf", "pypdfium2", "pypdfium2.*", "reportlab.*", "pdfplumber", "pi_heif", "pillow_heif"]
 ignore_missing_imports = true

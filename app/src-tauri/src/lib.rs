@@ -1,6 +1,7 @@
 mod commands;
 pub mod db;
 pub mod engine;
+pub mod ocr;
 pub mod settings;
 
 use std::path::PathBuf;
@@ -155,6 +156,9 @@ pub fn run() {
             commands::open_notices,
             commands::read_input_file,
             commands::file_stats,
+            ocr::ocr_languages,
+            ocr::add_ocr_language,
+            ocr::remove_ocr_language,
         ])
         .build(tauri::generate_context!())
         .expect("error while building PDFForge");

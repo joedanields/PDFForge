@@ -1,6 +1,6 @@
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { Eye, EyeOff, ImageIcon, X } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  languageName,
+  MAX_OCR_LANGUAGES,
+  parseLanguages,
+  toggleLanguage,
+  useOcrLanguages,
+} from "@/lib/ocrLanguages";
 import { passwordStrength } from "@/lib/passwordStrength";
 import { cn, fileName } from "@/lib/utils";
 import {
@@ -130,6 +137,19 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
         </div>
         {help}
       </fieldset>
+    );
+  }
+
+  if (field.kind === "languages") {
+    return (
+      <LanguagePicker
+        id={id}
+        label={field.meta.label}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        help={help}
+      />
     );
   }
 
@@ -406,5 +426,58 @@ function PasswordField({
       )}
       {help}
     </div>
+  );
+}
+
+/** OCR language chips: every installed language, several can be on ("eng+tam"). */
+function LanguagePicker({
+  id,
+  label,
+  value,
+  onChange,
+  disabled,
+  help,
+}: {
+  id: string;
+  label: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  disabled: boolean;
+  help: ReactNode;
+}) {
+  const { languages } = useOcrLanguages();
+  const selected = parseLanguages(value);
+  return (
+    <fieldset className="space-y-2" id={id}>
+      <legend className="text-sm font-medium">{label}</legend>
+      <div className="flex flex-wrap gap-2">
+        {languages.map((lang) => {
+          const on = selected.includes(lang.code);
+          return (
+            <button
+              key={lang.code}
+              type="button"
+              role="checkbox"
+              aria-checked={on}
+              disabled={disabled}
+              onClick={() => onChange(toggleLanguage(value, lang.code))}
+              className={cn(
+                "h-8 rounded-full border px-3 text-sm transition-colors",
+                on
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "bg-surface hover:bg-surface-2",
+              )}
+            >
+              {languageName(lang.code)}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-text-muted">
+        Pick every language the document is written in (up to {MAX_OCR_LANGUAGES}). More languages
+        can be added in Settings.
+      </p>
+      {help}
+    </fieldset>
   );
 }

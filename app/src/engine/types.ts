@@ -71,6 +71,12 @@ export interface FileStat {
   exists: boolean;
 }
 
+/** An OCR language model (Tesseract `.traineddata`), bundled or added by the user. */
+export interface OcrLanguage {
+  code: string;
+  bundled: boolean;
+}
+
 export interface AppInfo {
   version: string;
   dataDir: string;

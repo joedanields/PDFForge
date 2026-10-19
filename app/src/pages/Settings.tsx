@@ -1,6 +1,7 @@
 import { FlaskConical, ScrollText } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { OcrLanguagesSettings } from "@/components/OcrLanguagesSettings";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -90,6 +91,10 @@ export function SettingsPage() {
           />
           <p className="text-xs text-text-muted">{t("settings.outputDirHelp")}</p>
         </div>
+      </Section>
+
+      <Section title={t("settings.ocrLanguages")}>
+        <OcrLanguagesSettings />
       </Section>
 
       <Section title={t("settings.privacy")}>

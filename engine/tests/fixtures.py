@@ -378,6 +378,7 @@ def make_scanned_text_pdf(
     pages: int = 1,
     dpi: int = 200,
     skew: float = 0.0,
+    turn: int = 0,
 ) -> Path:
     """An image-only 'scan' (A4 at ``dpi``) of large black text: no text layer at all."""
     import img2pdf
@@ -401,6 +402,8 @@ def make_scanned_text_pdf(
             )
         if skew:
             img = img.rotate(skew, resample=Image.Resampling.BICUBIC, fillcolor=255, expand=False)
+        if turn:  # scanned sideways: the page shows the text rotated by ``turn`` degrees CCW
+            img = img.rotate(turn, expand=True)
         buffer = path.with_suffix(f".{n}.png")
         img.save(buffer, dpi=(dpi, dpi))
         frames.append(buffer)

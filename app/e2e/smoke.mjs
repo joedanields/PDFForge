@@ -37,6 +37,7 @@ const AVAILABLE = [
   "repair",
   "html-to-pdf",
   "pdf-to-pdfa",
+  "ocr",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -706,6 +707,27 @@ if (section("pdfa")) {
   const text = await runAndWait("Convert to PDF/A");
   expect(text.includes("PDF/A-2b · checked by PDFForge"), "converted to PDF/A-2b");
   expect(/annual_pdfa( \(\d+\))?\.pdf/.test(text), "output annual_pdfa.pdf");
+}
+
+if (section("ocr")) {
+  console.log("OCR");
+  await go("#/tool/ocr");
+  await addFiles("invoice-scan.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 1);
+  await page.getByRole("checkbox", { name: "Tamil" }).click();
+  expect(
+    (await page.getByRole("checkbox", { name: "English" }).getAttribute("aria-checked")) === "true",
+    "English stays selected next to Tamil",
+  );
+  const text = await runAndWait("Make searchable");
+  expect(text.includes("Text recognised on 1 page"), "scan made searchable");
+  expect(/invoice-scan_ocr( \(\d+\))?\.pdf/.test(text), "output invoice-scan_ocr.pdf");
+  await go("#/settings");
+  await page.getByRole("list", { name: "OCR languages" }).waitFor();
+  expect(
+    (await page.getByRole("list", { name: "OCR languages" }).getByRole("listitem").count()) >= 3,
+    "Settings lists the bundled OCR languages",
+  );
 }
 
 if (!only || only.has("echo") || echoOnly) {

@@ -24,6 +24,8 @@ export interface FieldMeta {
   file?: { name: string; extensions: readonly string[] };
   /** Page-range text bound to the thumbnail grid; empty means "all pages" when set. */
   pages?: { emptyMeansAll: boolean };
+  /** "eng+tam" value edited with the installed-OCR-language picker. */
+  languages?: boolean;
   /** Only show this field while another option has one of these values. */
   showWhen?: { key: string; values: readonly string[] };
   /** Secret values (passwords) are sent outside `options` and never stored in history. */
@@ -106,13 +108,16 @@ export const opt = {
       { label, help, color: true, ...extra },
     );
   },
+  languages(label: string, help?: string, extra?: Extra) {
+    return withMeta(z.string().min(2).default("eng"), { label, help, languages: true, ...extra });
+  },
   pages(label: string, help: string, emptyMeansAll: boolean, extra?: Extra) {
     return withMeta(z.string().default(""), { label, help, pages: { emptyMeansAll }, ...extra });
   },
 };
 
 export type FieldKind =
-  "boolean" | "enum" | "number" | "string" | "pages" | "password" | "color" | "file";
+  "boolean" | "enum" | "number" | "string" | "pages" | "password" | "color" | "file" | "languages";
 
 export interface FieldDescriptor {
   key: string;
@@ -157,15 +162,17 @@ export function describeOptions(schema: z.AnyZodObject): FieldDescriptor[] {
         max: inner.maxValue ?? undefined,
       };
     }
-    const kind: FieldKind = meta.pages
-      ? "pages"
-      : meta.secret
-        ? "password"
-        : meta.color
-          ? "color"
-          : meta.file
-            ? "file"
-            : "string";
+    const kind: FieldKind = meta.languages
+      ? "languages"
+      : meta.pages
+        ? "pages"
+        : meta.secret
+          ? "password"
+          : meta.color
+            ? "color"
+            : meta.file
+              ? "file"
+              : "string";
     return { key, kind, meta, defaultValue };
   });
 }

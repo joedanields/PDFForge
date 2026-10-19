@@ -118,6 +118,13 @@ export const en = {
     "PDFForge is built from open-source components. It contains no AGPL software, and all processing runs on this computer.",
   "settings.dataDir": "Data folder",
   "settings.offline": "All processing happens on this computer. No files leave your device.",
+  "settings.ocrLanguages": "OCR languages",
+  "settings.ocrHelp":
+    "Languages text recognition can read. English, Tamil and Hindi are included. To add another, download its .traineddata file (for example from the tessdata_fast collection of the Tesseract project) and choose it here — PDFForge never downloads anything itself.",
+  "settings.ocrBundled": "Included",
+  "settings.ocrAdd": "Add language file…",
+  "settings.ocrRemove": "Remove {name}",
+  "settings.ocrFileType": "Tesseract language",
   "engine.starting": "Starting PDF engine…",
   "engine.ready": "Engine ready",
   "engine.restarting": "Restarting PDF engine…",

@@ -42,6 +42,7 @@ export function ResultCard({ result, summary = null, combined = false, onStartOv
   const bytes = num(stats.bytes);
   const originalBytes = num(stats.original_bytes);
   const keptOriginal = stats.kept_original === true;
+  const noOutputReason = typeof stats.no_output_reason === "string" ? stats.no_output_reason : null;
   const protectedInputs = num(stats.protected_inputs) ?? 0;
   const echo = typeof stats.echo === "string" ? stats.echo : null;
   const protectAvailable = getTool("protect")?.status === "available";
@@ -76,6 +77,13 @@ export function ResultCard({ result, summary = null, combined = false, onStartOv
         <p className="mt-4 flex items-start gap-2 rounded-md bg-surface-2 px-4 py-3 text-left text-sm">
           <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
           {t("result.keptOriginal", { size: formatBytes(originalBytes) })}
+        </p>
+      )}
+
+      {noOutputReason && (
+        <p className="mt-4 flex items-start gap-2 rounded-md bg-surface-2 px-4 py-3 text-left text-sm">
+          <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+          {noOutputReason}
         </p>
       )}
 

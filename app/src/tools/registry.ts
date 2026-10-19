@@ -121,7 +121,6 @@ const IMAGES = ["jpg", "jpeg", "png", "bmp", "tif", "tiff", "webp", "gif", "heic
 const NO_OPTIONS = z.object({});
 
 const onePdf: AcceptSpec = { extensions: PDF, min: 1, max: 1, label: "One PDF file" };
-const manyPdfs: AcceptSpec = { extensions: PDF, min: 1, max: 500, label: "PDF files" };
 /** Conversions take up to 100 files at a time (engine CONVERT_MAX). */
 const convertPdfs: AcceptSpec = { extensions: PDF, min: 1, max: 100, label: "PDF files" };
 const twoPdfs: AcceptSpec = { extensions: PDF, min: 2, max: 2, label: "Two PDF files" };
@@ -569,21 +568,13 @@ export const excelToPdfOptions = z.object({
   ),
 });
 
-const OCR_LANGUAGES = [
-  { value: "eng", label: "English" },
-  { value: "tam", label: "Tamil" },
-  { value: "hin", label: "Hindi" },
-  { value: "eng+tam", label: "English + Tamil" },
-  { value: "eng+hin", label: "English + Hindi" },
-] as const;
-
 export const pdfToWordOptions = z.object({
   ocr: opt.bool(
     "Recognise text in scanned pages (OCR)",
     false,
     "Scanned pages become editable text instead of pictures. Slower.",
   ),
-  languages: opt.choice("Document language", OCR_LANGUAGES, "eng", undefined, {
+  languages: opt.languages("Document language", undefined, {
     showWhen: { key: "ocr", values: ["true"] },
   }),
 });
@@ -695,6 +686,25 @@ export const pdfToPdfaOptions = z.object({
     ],
     "2b",
     "Files that cannot be archived faithfully (e.g. print colours) are refused, never mislabelled.",
+  ),
+});
+
+export const ocrOptions = z.object({
+  languages: opt.languages("Document language"),
+  auto_rotate: opt.bool(
+    "Turn sideways pages upright",
+    true,
+    "Detects pages scanned the wrong way round and fixes their rotation (lossless).",
+  ),
+  deskew: opt.bool(
+    "Straighten crooked scans",
+    false,
+    "Re-saves the scanned picture of tilted pages, slightly straightened.",
+  ),
+  force: opt.bool(
+    "Recognise pages that already have text",
+    false,
+    "Normally pages with real text are left alone.",
   ),
 });
 
@@ -941,18 +951,39 @@ export const TOOLS: readonly ToolDef[] = [
         : `${reports.length} files repaired`;
     },
   },
-  soon({
+  {
     id: "ocr",
     ref: "B3",
     name: "OCR PDF",
     description: "Make scanned documents searchable and selectable.",
     category: "optimize",
     icon: ScanText,
-    accepts: manyPdfs,
+    accepts: convertPdfs,
+    optionsSchema: ocrOptions,
+    status: "available",
     priority: "should",
     phase: 2,
-    keywords: ["scan", "text recognition", "searchable"],
-  }),
+    engineMethod: "ocr",
+    actionLabel: "Make searchable",
+    keywords: ["scan", "text recognition", "searchable", "tesseract", "tamil", "hindi"],
+    toEngine: (o) => ({
+      languages: o.languages,
+      auto_rotate: o.auto_rotate,
+      deskew: o.deskew,
+      force: o.force,
+    }),
+    summary: (s) => {
+      if (typeof s.ocr_pages !== "number") return null;
+      const parts = [`Text recognised on ${s.ocr_pages} ${s.ocr_pages === 1 ? "page" : "pages"}`];
+      if (typeof s.skipped_pages === "number" && s.skipped_pages > 0) {
+        parts.push(`${s.skipped_pages} already had text`);
+      }
+      if (typeof s.rotated === "number" && s.rotated > 0) parts.push(`${s.rotated} turned upright`);
+      if (typeof s.deskewed === "number" && s.deskewed > 0)
+        parts.push(`${s.deskewed} straightened`);
+      return parts.join(" · ");
+    },
+  },
 
   // ── C. Convert to PDF ─────────────────────────────────────────────────────────────────────
   {
