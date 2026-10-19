@@ -66,6 +66,16 @@ def main(out: Path) -> None:
         statement.drawString(72, A4[1] - 100 - n * 30, line)
     statement.showPage()
     statement.save()
+    for name, lines in (
+        ("contract v1.pdf", ["Rent: 15000 per month", "Deposit: two months", "No pets"]),
+        ("contract v2.pdf", ["Rent: 18000 per month", "Deposit: two months", "Parking included"]),
+    ):
+        version = canvas.Canvas(str(out / name), pagesize=A4)
+        version.setFont("Helvetica", 16)
+        for n, line in enumerate(lines):
+            version.drawString(72, A4[1] - 100 - n * 30, line)
+        version.showPage()
+        version.save()
     broken = make_text_pdf(out / "damaged.pdf", 3).read_bytes()
     (out / "damaged.pdf").write_bytes(re.sub(rb"startxref\s+\d+", b"startxref\n999999", broken))
     print(f"e2e inputs written to {out}")

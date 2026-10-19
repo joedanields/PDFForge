@@ -6,6 +6,7 @@ import { DropZone } from "@/components/DropZone";
 import { FileList } from "@/components/FileList";
 import { OptionsForm } from "@/components/OptionsForm";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
+import { type Change, CompareView } from "@/components/CompareView";
 import { CropBoard } from "@/components/editor/CropBoard";
 import { EditorBoard } from "@/components/editor/EditorBoard";
 import { RedactBoard } from "@/components/editor/RedactBoard";
@@ -461,6 +462,16 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   if (phase.kind === "done") {
     return (
       <PageShell tool={tool} title={tool.name}>
+        {tool.layout === "compare" && (
+          <CompareView
+            files={files}
+            changes={
+              Array.isArray(phase.result.stats.changes)
+                ? (phase.result.stats.changes as Change[])
+                : []
+            }
+          />
+        )}
         <ResultCard
           result={phase.result}
           summary={tool.summary?.(phase.result.stats) ?? null}

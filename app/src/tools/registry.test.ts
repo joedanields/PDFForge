@@ -54,6 +54,7 @@ const IMPLEMENTED = [
   "sign",
   "crop",
   "redact",
+  "compare",
 ];
 
 describe("tool registry contents", () => {

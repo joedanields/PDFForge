@@ -16,6 +16,7 @@ a = Analysis(
     # cannot silently drop one from the frozen build. worker.py is the job-process entry point.
     hiddenimports=[
         "worker",
+        "tools.compare",
         "tools.debug",
         "tools.edit",
         "tools.editor",

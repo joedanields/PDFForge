@@ -13,6 +13,7 @@ from collections.abc import Iterator, Mapping
 from jobs import ToolFn
 
 _TARGETS: dict[str, str] = {
+    "compare": "compare:compare",
     "compress": "optimize:compress",
     "crop": "edit:crop",
     "echo": "debug:echo",

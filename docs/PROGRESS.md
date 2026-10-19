@@ -5,7 +5,7 @@
 ## Now
 
 - **Current phase:** Phase 3 — Editing & security (Phases 1 and 2 done)
-- **Working on:** 3.5 Compare PDF
+- **Working on:** 3.6 Phase 3 installer, notices and release smoke
 
 ## Phase 3 — Editing & security
 
@@ -15,8 +15,8 @@
 | 3.1 Edit PDF (E1) | done | test_edit_pdf (13), vitest editor (7), smoke `edit` | 2cbf204 | editor: text, pictures, shapes, arrows, pen, highlighter, notes, eraser, undo/redo, zoom; flatten or annotations; D-029 |
 | 3.2 Sign PDF (F3) | done | test_sign (6), Rust signatures (3), smoke `sign` | f4ba28d | type / draw / upload, initials, date, text; DPAPI-encrypted saved signatures; D-030 |
 | 3.3 Crop PDF (E4) | done | test_crop (9), smoke `crop` | e241ba6 | draw the area with corner handles, this page / all pages, auto-trim white margins; D-031 |
-| 3.4 Redact PDF (F4) — true redaction | done | test_redact (9), vitest redactSearch (4), smoke `redact` | (this commit) | redacted pages rebuilt from pixels (+ OCR); search with email/phone/PAN/Aadhaar presets; D-032 |
-| 3.5 Compare PDF (F5) | todo | | | |
+| 3.4 Redact PDF (F4) — true redaction | done | test_redact (9), vitest redactSearch (4), smoke `redact` | 2aa1ce9 | redacted pages rebuilt from pixels (+ OCR); search with email/phone/PAN/Aadhaar presets; D-032 |
+| 3.5 Compare PDF (F5) | done | test_compare (6), smoke `compare` | (this commit) | word-level diff, synced panes, change list, pixel overlay, annotated report; D-033 |
 | 3.6 Phase 3 installer + release smoke (v1.0 exit) | todo | | | |
 
 ## Phase 2 — Conversions (done)

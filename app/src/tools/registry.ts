@@ -81,7 +81,7 @@ export interface ToolDef {
   requiresIntelligence?: boolean;
   /** "files": file cards (default). "pages": one PDF shown as a selectable page grid.
    * "organize": page board built from one or more PDFs. */
-  layout?: "files" | "pages" | "organize" | "editor" | "sign" | "crop" | "redact";
+  layout?: "files" | "pages" | "organize" | "editor" | "sign" | "crop" | "redact" | "compare";
   /** pages layout: the page-range option that mirrors the grid selection. */
   pageSelection?: {
     option: string;
@@ -123,7 +123,12 @@ const NO_OPTIONS = z.object({});
 const onePdf: AcceptSpec = { extensions: PDF, min: 1, max: 1, label: "One PDF file" };
 /** Conversions take up to 100 files at a time (engine CONVERT_MAX). */
 const convertPdfs: AcceptSpec = { extensions: PDF, min: 1, max: 100, label: "PDF files" };
-const twoPdfs: AcceptSpec = { extensions: PDF, min: 2, max: 2, label: "Two PDF files" };
+const twoPdfs: AcceptSpec = {
+  extensions: PDF,
+  min: 2,
+  max: 2,
+  label: "Two PDF files: the old version first",
+};
 
 function soon(
   def: Omit<ToolDef, "status" | "optionsSchema" | "actionLabel"> &
@@ -1599,18 +1604,29 @@ export const TOOLS: readonly ToolDef[] = [
       return `${s.areas} ${s.areas === 1 ? "area" : "areas"} removed on ${pages} ${pages === 1 ? "page" : "pages"}`;
     },
   },
-  soon({
+  {
     id: "compare",
     ref: "F5",
     name: "Compare PDF",
-    description: "See what changed between two versions, side by side.",
+    description: "See what changed between two versions, side by side, with a report.",
     category: "security",
     icon: GitCompareArrows,
     accepts: twoPdfs,
+    optionsSchema: NO_OPTIONS,
+    status: "available",
     priority: "could",
     phase: 3,
-    keywords: ["diff", "versions"],
-  }),
+    engineMethod: "compare",
+    actionLabel: "Compare",
+    keywords: ["diff", "difference", "versions", "changes", "redline"],
+    layout: "compare",
+    summary: (s) =>
+      typeof s.added === "number" && typeof s.removed === "number" && typeof s.changed === "number"
+        ? s.added + s.removed + s.changed === 0
+          ? "The two documents contain the same text"
+          : `${s.added} added · ${s.removed} removed · ${s.changed} changed`
+        : null,
+  },
 
   // ── I. Intelligence (v2, off by default) ──────────────────────────────────────────────────
   soon({

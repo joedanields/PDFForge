@@ -42,6 +42,7 @@ const AVAILABLE = [
   "sign",
   "crop",
   "redact",
+  "compare",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -108,7 +109,7 @@ async function waitForThumbs(count) {
 async function runAndWait(label) {
   await page.getByRole("button", { name: label, exact: true }).click();
   await page.getByText("Done!").waitFor({ timeout: 60_000 });
-  return page.locator("main section").innerText();
+  return page.locator("main section[aria-live=polite]").innerText();
 }
 async function startOver() {
   await page.getByRole("button", { name: "Start over" }).click();
@@ -910,6 +911,30 @@ if (section("redact")) {
   const text = await runAndWait("Redact permanently");
   expect(text.includes("3 areas removed on 1 page"), "3 areas removed");
   expect(/statement_redacted( \(\d+\))?\.pdf/.test(text), "output statement_redacted.pdf");
+}
+
+if (section("compare")) {
+  console.log("Compare PDF");
+  await go("#/tool/compare");
+  await addFiles("contract v1.pdf", "contract v2.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol li").length === 2);
+  const text = await runAndWait("Compare");
+  expect(/\d+ added · \d+ removed · [1-9]\d* changed/.test(text), "changes counted");
+  expect(/contract v2_compared( \(\d+\))?\.pdf/.test(text), "report contract v2_compared.pdf");
+  const list = page.getByRole("navigation", { name: "Changes" });
+  await list.getByText("18000").first().waitFor();
+  ok("change list shows the new rent");
+  await list.getByRole("button").first().click();
+  await page.getByTestId("compare-new").locator("span.border-2").first().waitFor();
+  ok("changes highlighted in the panes");
+  await page.getByRole("switch", { name: "Show pixel differences" }).click();
+  await page.waitForFunction(
+    () => document.querySelectorAll("[data-testid=compare-new] img").length >= 2,
+    null,
+    { timeout: 15_000 },
+  );
+  ok("pixel difference overlay");
+  await shot("compare-result");
 }
 
 if (!only || only.has("echo") || echoOnly) {
