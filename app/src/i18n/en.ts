@@ -204,6 +204,17 @@ export const en = {
   "settings.clearSignatures": "Delete saved signatures",
   "settings.signaturesCleared": "Saved signatures deleted.",
   "crop.canvas": "Page {page} — drag to choose the area to keep",
+  "redact.find": "Find text to redact",
+  "redact.term": "Word or phrase",
+  "redact.termPlaceholder": "Word or phrase to remove everywhere",
+  "redact.markAll": "Mark all matches",
+  "redact.presets": "Patterns",
+  "redact.help":
+    "Matches are marked on every page; check them, draw boxes over anything else (pictures, signatures), then redact. Marked areas are removed for good.",
+  "redact.nothingToFind": "Type a word or tick a pattern first.",
+  "redact.noMatches": "No matches found.",
+  "redact.marked": "{count} matches marked",
+  "redact.empty": "Mark at least one area to redact.",
   "settings.ocrLanguages": "OCR languages",
   "settings.ocrHelp":
     "Languages text recognition can read. English, Tamil and Hindi are included. To add another, download its .traineddata file (for example from the tessdata_fast collection of the Tesseract project) and choose it here — PDFForge never downloads anything itself.",

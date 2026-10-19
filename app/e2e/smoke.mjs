@@ -41,6 +41,7 @@ const AVAILABLE = [
   "edit-pdf",
   "sign",
   "crop",
+  "redact",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -886,6 +887,29 @@ if (section("crop")) {
   await page.getByText("Keep a margin of (pt)").waitFor();
   const all = await runAndWait("Crop PDF");
   expect(all.includes("Cropped 5 of 5 pages"), "white margins trimmed on every page");
+}
+
+if (section("redact")) {
+  console.log("Redact PDF");
+  await go("#/tool/redact");
+  await addFiles("statement.pdf");
+  await page.getByTestId("editor-canvas").waitFor({ timeout: 30_000 });
+  await page.getByLabel("Email addresses").check();
+  await page.getByLabel("PAN numbers").check();
+  await page.getByRole("button", { name: "Mark all matches" }).click();
+  await page.getByText("2 matches marked").waitFor();
+  ok("email and PAN found and marked");
+  await page.getByLabel("Word or phrase", { exact: true }).fill("Balance");
+  await page.getByLabel("Email addresses").uncheck();
+  await page.getByLabel("PAN numbers").uncheck();
+  await page.getByRole("button", { name: "Mark all matches" }).click();
+  await page.getByText("1 matches marked").waitFor();
+  await page.getByText("3 added").waitFor();
+  ok("typed word marked too");
+  await shot("redact-ready");
+  const text = await runAndWait("Redact permanently");
+  expect(text.includes("3 areas removed on 1 page"), "3 areas removed");
+  expect(/statement_redacted( \(\d+\))?\.pdf/.test(text), "output statement_redacted.pdf");
 }
 
 if (!only || only.has("echo") || echoOnly) {

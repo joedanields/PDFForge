@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4, landscape
+from reportlab.pdfgen import canvas
 
 from tests.fixtures import (
     make_document_pdf,
@@ -57,6 +58,14 @@ def main(out: Path) -> None:
         '<img src="logo.png"><img src="https://example.com/remote.png"></body></html>',
         encoding="utf-8",
     )
+    statement = canvas.Canvas(str(out / "statement.pdf"), pagesize=A4)
+    statement.setFont("Helvetica", 14)
+    for n, line in enumerate(
+        ["Customer statement", "Email: ravi.kumar@example.com", "PAN: ABCDE1234F", "Balance 1,200"]
+    ):
+        statement.drawString(72, A4[1] - 100 - n * 30, line)
+    statement.showPage()
+    statement.save()
     broken = make_text_pdf(out / "damaged.pdf", 3).read_bytes()
     (out / "damaged.pdf").write_bytes(re.sub(rb"startxref\s+\d+", b"startxref\n999999", broken))
     print(f"e2e inputs written to {out}")

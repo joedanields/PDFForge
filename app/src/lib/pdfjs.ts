@@ -134,6 +134,15 @@ function loadPreview(path: string, password?: string): Promise<PreviewResult> {
 
 // ── Open documents for page-level tools (ThumbnailGrid) ─────────────────────────────────────
 
+export interface TextItemBox {
+  str: string;
+  origin: [number, number];
+  along: [number, number];
+  up: [number, number];
+  width: number;
+  size: number;
+}
+
 export interface PageSize {
   width: number;
   height: number;
@@ -215,6 +224,36 @@ export class PdfSource {
       this.sizes.set(index, size);
     }
     return size;
+  }
+
+  /**
+   * Text runs of a page with their geometry in *display fractions* (origin top-left, after
+   * /Rotate): baseline start `origin`, unit reading direction `along` and `up` vectors
+   * (fractions per point), advance `width` and `size` in points. Hidden text is included.
+   */
+  async textItems(index: number): Promise<TextItemBox[]> {
+    const page = await this.doc.getPage(index + 1);
+    const viewport = page.getViewport({ scale: 1 });
+    const content = await page.getTextContent();
+    const W = viewport.width;
+    const H = viewport.height;
+    const items: TextItemBox[] = [];
+    for (const item of content.items) {
+      if (!("str" in item) || !item.str) continue;
+      const tx = pdfjs.Util.transform(viewport.transform, item.transform) as number[];
+      const [a = 0, b = 0, c = 0, d = 0, e = 0, f = 0] = tx;
+      const size = Math.hypot(c, d) || Math.hypot(a, b);
+      const alongLen = Math.hypot(a, b) || 1;
+      items.push({
+        str: item.str,
+        origin: [e / W, f / H],
+        along: [a / alongLen / W, b / alongLen / H],
+        up: [c / (size || 1) / W, d / (size || 1) / H],
+        width: item.width,
+        size,
+      });
+    }
+    return items;
   }
 
   /** Blob URL of page ``index`` rendered about ``cssWidth`` px wide (cached per size bucket). */

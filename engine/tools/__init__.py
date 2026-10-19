@@ -33,6 +33,7 @@ _TARGETS: dict[str, str] = {
     "pdf-to-word": "pdf_office:pdf_to_word",
     "powerpoint-to-pdf": "office:powerpoint_to_pdf",
     "protect": "security:protect",
+    "redact": "redact:redact",
     "remove-pages": "organize:remove_pages",
     "repair": "optimize:repair",
     "rotate": "organize:rotate",

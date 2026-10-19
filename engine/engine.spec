@@ -26,6 +26,7 @@ a = Analysis(
         "tools.organize",
         "tools.pdf_office",
         "tools.pdfa",
+        "tools.redact",
         "tools.security",
         "tools.to_pdf",
     ],

@@ -8,6 +8,7 @@ import { OptionsForm } from "@/components/OptionsForm";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
 import { CropBoard } from "@/components/editor/CropBoard";
 import { EditorBoard } from "@/components/editor/EditorBoard";
+import { RedactBoard } from "@/components/editor/RedactBoard";
 import { SignBoard } from "@/components/editor/SignBoard";
 import { OrganizeBoard, type OrganizePlan } from "@/components/OrganizeBoard";
 import { PagesPanel } from "@/components/PagesPanel";
@@ -138,7 +139,8 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   const [cropBox, setCropBox] = useState<CropBox>(DEFAULT_CROP_BOX);
   const [cropPage, setCropPage] = useState(0);
   const signTool = tool.layout === "sign";
-  const editorTool = tool.layout === "editor" || signTool;
+  const redactTool = tool.layout === "redact";
+  const editorTool = tool.layout === "editor" || signTool || redactTool;
   const [editorObjects, setEditorObjects] = useState<EditObject[]>([]);
   const [signImages, setSignImages] = useState<Record<string, string>>({});
   const editing = phase.kind === "edit";
@@ -314,7 +316,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     }
   }
   if (!blocker && editorTool && files.length > 0 && editorObjects.length === 0) {
-    blocker = t(signTool ? "sign.empty" : "editor.empty");
+    blocker = t(signTool ? "sign.empty" : redactTool ? "redact.empty" : "editor.empty");
   }
   if (!blocker && organizeTool && files.length > 0 && !organizePlan?.pages.length) {
     blocker = t("organize.empty");
@@ -405,16 +407,23 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     const secrets =
       signTool && Object.keys(images).length > 0 ? { ...formSecrets, images } : formSecrets;
     const converted = tool.toEngine ? tool.toEngine(plain) : plain;
-    const engineOptions = editorTool
-      ? { ...converted, objects: editorObjects.map(editorToEngine) }
-      : cropTool
-        ? {
-            mode: converted.mode,
-            margin: converted.margin,
-            box: cropBox,
-            pages: converted.apply === "current" ? String(cropPage + 1) : "all",
-          }
-        : converted;
+    const engineOptions = redactTool
+      ? {
+          ...converted,
+          areas: editorObjects
+            .filter((o) => o.kind === "rect")
+            .map((o) => ({ page: o.page, x: o.x, y: o.y, w: o.w, h: o.h })),
+        }
+      : editorTool
+        ? { ...converted, objects: editorObjects.map(editorToEngine) }
+        : cropTool
+          ? {
+              mode: converted.mode,
+              margin: converted.margin,
+              box: cropBox,
+              pages: converted.apply === "current" ? String(cropPage + 1) : "all",
+            }
+          : converted;
     await execute(tool.engineMethod, {
       options: engineOptions,
       ...(Object.keys(secrets).length > 0 && { secrets }), // never stored in history
@@ -532,7 +541,15 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
               onImages={setSignImages}
             />
           )}
-          {editorTool && !signTool && files[0]?.status === "ready" && (
+          {redactTool && files[0]?.status === "ready" && (
+            <RedactBoard
+              key={files[0].key}
+              file={files[0]}
+              disabled={!editing}
+              onChange={setEditorObjects}
+            />
+          )}
+          {editorTool && !signTool && !redactTool && files[0]?.status === "ready" && (
             <EditorBoard
               key={files[0].key}
               file={files[0]}

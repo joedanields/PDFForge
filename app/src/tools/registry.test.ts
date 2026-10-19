@@ -53,6 +53,7 @@ const IMPLEMENTED = [
   "edit-pdf",
   "sign",
   "crop",
+  "redact",
 ];
 
 describe("tool registry contents", () => {

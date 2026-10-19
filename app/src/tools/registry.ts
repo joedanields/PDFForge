@@ -81,7 +81,7 @@ export interface ToolDef {
   requiresIntelligence?: boolean;
   /** "files": file cards (default). "pages": one PDF shown as a selectable page grid.
    * "organize": page board built from one or more PDFs. */
-  layout?: "files" | "pages" | "organize" | "editor" | "sign" | "crop";
+  layout?: "files" | "pages" | "organize" | "editor" | "sign" | "crop" | "redact";
   /** pages layout: the page-range option that mirrors the grid selection. */
   pageSelection?: {
     option: string;
@@ -740,6 +740,31 @@ export const cropOptions = z.object({
   margin: opt.int("Keep a margin of (pt)", 0, 72, 6, undefined, {
     showWhen: { key: "mode", values: ["auto"] },
   }),
+});
+
+export const redactOptions = z.object({
+  ocr: opt.bool(
+    "Keep the rest of the page searchable",
+    true,
+    "Redacted pages are rebuilt as pictures; OCR adds their remaining text back.",
+  ),
+  languages: opt.languages("Document language", undefined, {
+    showWhen: { key: "ocr", values: ["true"] },
+  }),
+  remove_metadata: opt.bool(
+    "Remove document information",
+    true,
+    "Title, author and other properties can contain names too.",
+  ),
+  dpi: opt.choice(
+    "Quality of redacted pages",
+    [
+      { value: "150", label: "Smaller file (150 dpi)" },
+      { value: "200", label: "Standard (200 dpi)" },
+      { value: "300", label: "Sharp (300 dpi)" },
+    ],
+    "200",
+  ),
 });
 
 export const echoOptions = z.object({
@@ -1546,18 +1571,34 @@ export const TOOLS: readonly ToolDef[] = [
         ? `${s.objects} ${s.objects === 1 ? "item" : "items"} signed onto the document`
         : null,
   },
-  soon({
+  {
     id: "redact",
     ref: "F4",
     name: "Redact PDF",
-    description: "Permanently remove sensitive text and areas, not just cover them.",
+    description: "Permanently remove sensitive text and images — not just cover them.",
     category: "security",
     icon: EyeOff,
     accepts: onePdf,
+    optionsSchema: redactOptions,
+    status: "available",
     priority: "could",
     phase: 3,
-    keywords: ["black out", "censor", "privacy"],
-  }),
+    engineMethod: "redact",
+    actionLabel: "Redact permanently",
+    keywords: ["black out", "remove text", "privacy", "pan", "aadhaar", "censor"],
+    layout: "redact",
+    toEngine: (o) => ({
+      ocr: o.ocr,
+      languages: o.languages,
+      remove_metadata: o.remove_metadata,
+      dpi: Number(o.dpi),
+    }),
+    summary: (s) => {
+      if (typeof s.areas !== "number") return null;
+      const pages = typeof s.pages_redacted === "number" ? s.pages_redacted : 0;
+      return `${s.areas} ${s.areas === 1 ? "area" : "areas"} removed on ${pages} ${pages === 1 ? "page" : "pages"}`;
+    },
+  },
   soon({
     id: "compare",
     ref: "F5",

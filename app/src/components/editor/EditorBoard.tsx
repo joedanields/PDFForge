@@ -91,6 +91,10 @@ interface Props {
   /** Objects to place on the next click (Sign: a saved signature). */
   stamp?: Omit<EditObject, "id" | "page" | "x" | "y"> | null;
   onStampPlaced?: () => void;
+  /** Starting style for new objects (Redact: black boxes). */
+  defaultStyle?: Partial<Style>;
+  /** Objects to add from outside (Redact: search matches); `nonce` changes per batch. */
+  incoming?: { nonce: number; objects: EditObject[] } | null;
 }
 
 type Drag =
@@ -107,13 +111,15 @@ export function EditorBoard({
   tools,
   stamp,
   onStampPlaced,
+  defaultStyle,
+  incoming,
 }: Props) {
   const [source, setSource] = useState<PdfSource | null>(null);
   const [page, setPage] = useState(0);
   const [tool, setTool] = useState<EditTool>("select");
   const [zoom, setZoom] = useState(1);
   const [selected, setSelected] = useState<string | null>(null);
-  const [style, setStyle] = useState<Style>(DEFAULT_STYLE);
+  const [style, setStyle] = useState<Style>({ ...DEFAULT_STYLE, ...defaultStyle });
   const [pendingImage, setPendingImage] = useState<{
     path: string;
     url: string;
@@ -155,6 +161,15 @@ export function EditorBoard({
   useEffect(() => {
     onChange(objects);
   }, [objects, onChange]);
+
+  const lastIncoming = useRef<number | null>(null);
+  useEffect(() => {
+    if (!incoming || incoming.nonce === lastIncoming.current) return;
+    lastIncoming.current = incoming.nonce;
+    if (incoming.objects.length > 0) {
+      dispatch({ type: "set", objects: [...history.present, ...incoming.objects] });
+    }
+  }, [incoming, history.present]);
 
   const selectedObject = objects.find((o) => o.id === selected) ?? null;
 

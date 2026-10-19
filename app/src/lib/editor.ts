@@ -288,3 +288,11 @@ export function historyReducer(
 export type CropBox = [number, number, number, number];
 
 export const DEFAULT_CROP_BOX: CropBox = [0.05, 0.05, 0.95, 0.95];
+
+/** Redaction marks preview as translucent black, so the user can still check what is under. */
+export const REDACT_STYLE: Partial<Style> = {
+  fill: "#000000",
+  stroke: "#E03131",
+  width: 1,
+  opacity: 0.55,
+};
