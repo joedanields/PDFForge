@@ -10,6 +10,9 @@ Sources (run after scripts/build-engine.ps1 so the frozen engine's analysis exis
 - UI: production npm dependencies (`pnpm licenses list --prod --json`), incl. the Inter font.
 - Shell: Rust crates linked into the app for Windows x64 (`cargo metadata`, normal
   dependencies only — build scripts and dev tools are not shipped).
+- Bundled programs: LibreOffice (its own license.txt) and Tesseract with the libraries inside
+  its Windows build (texts in third_party/licenses/tesseract-runtime, fetched once by
+  scripts/fetch_runtime_licenses.py) — run scripts/fetch-vendor.ps1 first.
 - Installer: NSIS stub and the embedded WebView2 bootstrapper.
 Identical licence texts are printed once, followed by every component that uses them.
 """
@@ -38,7 +41,7 @@ class Component:
     name: str
     version: str
     license: str
-    part: str  # "engine" | "ui" | "shell" | "installer"
+    part: str  # "engine" | "ui" | "shell" | "vendor" | "installer"
     texts: list[tuple[str, str]] = field(default_factory=list)  # (title, text)
 
 
@@ -247,6 +250,56 @@ def rust_components() -> list[Component]:
     return components
 
 
+# ── bundled programs (vendor/) ────────────────────────────────────────────────────────────────
+
+
+def vendor_components() -> list[Component]:
+    """LibreOffice and Tesseract as fetched by scripts/fetch-vendor.ps1 (docs/09 §2, D-013)."""
+    vendor = ROOT / "vendor"
+    components: list[Component] = []
+    lo = vendor / "libreoffice"
+    if not (lo / ".pdfforge-vendor").exists():
+        sys.exit("Run scripts/fetch-vendor.ps1 first (vendor/libreoffice is missing)")
+    lo_version = read(lo / ".pdfforge-vendor").split()[0]
+    components.append(
+        Component(
+            "LibreOffice (unmodified, trimmed; incl. its bundled libraries and fonts)",
+            lo_version,
+            "MPL-2.0 (+ licences of bundled components, see text)",
+            "vendor",
+            [("LibreOffice", read(lo / "license.txt"))],
+        )
+    )
+    runtime = ROOT / "third_party" / "licenses" / "tesseract-runtime"
+    stamp = vendor / "tesseract" / ".pdfforge-vendor"
+    if not stamp.exists():
+        sys.exit("Run scripts/fetch-vendor.ps1 first (vendor/tesseract is missing)")
+    tess_version = read(stamp).split()[0]
+    for entry in json.loads(read(runtime / "index.json")):
+        version = tess_version if entry["name"] == "Tesseract OCR" else ""
+        components.append(
+            Component(
+                f"{entry['name']} ({entry['files']})",
+                version,
+                entry["license"],
+                "vendor",
+                [(entry["name"], read(runtime / entry["text"]))],
+            )
+        )
+    tessdata = vendor / "tesseract" / "tessdata"
+    models = sorted(p.stem for p in tessdata.glob("*.traineddata"))
+    components.append(
+        Component(
+            f"Tesseract language data, tessdata_fast ({', '.join(models)})",
+            "",
+            "Apache-2.0",
+            "vendor",
+            [("Tesseract", read(runtime / "tesseract-ocr.txt"))],
+        )
+    )
+    return components
+
+
 # ── installer ─────────────────────────────────────────────────────────────────────────────────
 
 
@@ -275,6 +328,7 @@ PARTS = {
     "engine": "PDF engine (engine.exe)",
     "ui": "User interface (WebView)",
     "shell": "Application shell (pdfforge.exe)",
+    "vendor": "Bundled programs (vendor/: LibreOffice, Tesseract OCR)",
     "installer": "Installer",
 }
 
@@ -311,9 +365,11 @@ def write(components: list[Component]) -> None:
         "from the components actually shipped in this build.",
         "",
         "PDFForge does not include AGPL-licensed software (no Ghostscript, MuPDF/PyMuPDF or",
-        "pdf2docx; see docs/09_LICENSING.md §3). LGPL components (img2pdf, libheif, libde265) are",
-        "used unmodified as separate libraries; their source code is available from the projects",
-        "listed, and on request from the PDFForge authors.",
+        "pdf2docx; see docs/09_LICENSING.md §3). LGPL components (img2pdf, libheif, libde265,",
+        "libiconv) are used unmodified as separate libraries. LibreOffice (MPL-2.0) and Tesseract",
+        "run as separate, unmodified programs; Tesseract's Windows build contains JBIG-KIT",
+        "(GPL-2.0). The source code of these components is available from the projects listed,",
+        "and on request from the PDFForge authors.",
         "",
     ]
     for part, title in PARTS.items():
@@ -323,7 +379,7 @@ def write(components: list[Component]) -> None:
         lines += [title, "-" * len(title)]
         width = max(len(c.name) for c in items) + 2
         for c in items:
-            lines.append(f"  {c.name.ljust(width)}{c.version.ljust(12)}{c.license}")
+            lines.append(f"  {c.name.ljust(width)}{c.version.ljust(16)}{c.license}")
         lines.append("")
 
     groups: dict[str, tuple[str, list[str]]] = {}
@@ -343,7 +399,13 @@ def write(components: list[Component]) -> None:
 
 
 def main() -> None:
-    components = python_components() + npm_components() + rust_components() + installer_components()
+    components = (
+        python_components()
+        + npm_components()
+        + rust_components()
+        + vendor_components()
+        + installer_components()
+    )
     fill_standard_texts(components)
     write(components)
     counts = {p: sum(1 for c in components if c.part == p) for p in PARTS}

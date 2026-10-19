@@ -4,8 +4,8 @@
 
 ## Now
 
-- **Current phase:** Phase 2 — Conversions
-- **Working on:** 2.8 Notices, Phase 2 installer + release smoke
+- **Current phase:** Phase 3 — Editing & security (Phase 2 done)
+- **Working on:** Phase 3.0 — built-in viewer
 
 ## Phase 2 — Conversions
 
@@ -18,8 +18,8 @@
 | 2.4 Repair (B2) | done | test_repair (9), smoke `repair` | 9162f9f | qpdf + pypdf fallback; D-022 |
 | 2.5 HTML → PDF (C5) | done | test_html_to_pdf (6), smoke `html` | 8723d7b | LibreOffice on a self-contained, script-free copy; local files only; D-023 |
 | 2.6 PDF → PDF/A (D5) | done | test_pdfa (7, veraPDF-validated on the dev machine), smoke `pdfa` | 09dc272 | PDF/A-2b/3b with pikepdf, no Ghostscript; CMYK / unembeddable fonts refused; D-024. Also: lazy tool loading cuts ~2.4 s off every job (D-025) |
-| 2.7 OCR (B3) + OCR languages in Settings | done | test_ocr (11), Rust ocr (3), vitest ocrLanguages (4), smoke `ocr` | (this commit) | Tesseract text-only layer, auto-rotate, deskew, parallel pages (P6 met); D-026, D-027 |
-| 2.8 Notices, Phase 2 installer + release smoke | todo | | | |
+| 2.7 OCR (B3) + OCR languages in Settings | done | test_ocr (11), Rust ocr (3), vitest ocrLanguages (4), smoke `ocr` | b7137bc | Tesseract text-only layer, auto-rotate, deskew, parallel pages (P6 met); D-026, D-027 |
+| 2.8 Notices, Phase 2 installer + release smoke | done | full suite + release smoke (Echo + all 25 tools in the built exe) | (this commit) | installer 184.5 MB (176 MiB) incl. LibreOffice + Tesseract; notices cover vendor/ (D-013) |
 
 ## Phase 1 — Core PDF tools (done)
 

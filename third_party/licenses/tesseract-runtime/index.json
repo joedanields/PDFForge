@@ -1,0 +1,163 @@
+[
+  {
+    "name": "Tesseract OCR",
+    "files": "tesseract.exe, libtesseract-5.dll",
+    "license": "Apache-2.0",
+    "text": "tesseract-ocr.txt",
+    "source": "https://raw.githubusercontent.com/tesseract-ocr/tesseract/5.4.0/LICENSE"
+  },
+  {
+    "name": "Leptonica",
+    "files": "libleptonica-6.dll",
+    "license": "BSD-2-Clause",
+    "text": "leptonica.txt",
+    "source": "https://raw.githubusercontent.com/DanBloomberg/leptonica/master/leptonica-license.txt"
+  },
+  {
+    "name": "libarchive",
+    "files": "libarchive-13.dll",
+    "license": "BSD-2-Clause",
+    "text": "libarchive.txt",
+    "source": "https://raw.githubusercontent.com/libarchive/libarchive/master/COPYING"
+  },
+  {
+    "name": "BLAKE2 (libb2)",
+    "files": "libb2-1.dll",
+    "license": "CC0-1.0",
+    "text": "blake2-libb2.txt",
+    "source": "https://raw.githubusercontent.com/BLAKE2/libb2/master/COPYING"
+  },
+  {
+    "name": "bzip2",
+    "files": "libbz2-1.dll",
+    "license": "bzip2-1.0.6",
+    "text": "bzip2.txt",
+    "source": "https://sourceware.org/git/?p=bzip2.git;a=blob_plain;f=LICENSE;hb=HEAD"
+  },
+  {
+    "name": "OpenSSL",
+    "files": "libcrypto-3-x64.dll",
+    "license": "Apache-2.0",
+    "text": "openssl.txt",
+    "source": "https://raw.githubusercontent.com/openssl/openssl/openssl-3.3.1/LICENSE.txt"
+  },
+  {
+    "name": "libdeflate",
+    "files": "libdeflate.dll",
+    "license": "MIT",
+    "text": "libdeflate.txt",
+    "source": "https://raw.githubusercontent.com/ebiggers/libdeflate/master/COPYING"
+  },
+  {
+    "name": "Expat",
+    "files": "libexpat-1.dll",
+    "license": "MIT",
+    "text": "expat.txt",
+    "source": "https://raw.githubusercontent.com/libexpat/libexpat/master/expat/COPYING"
+  },
+  {
+    "name": "GCC runtime (libgcc, libstdc++)",
+    "files": "libgcc_s_seh-1.dll, libstdc++-6.dll",
+    "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+    "text": "gcc-runtime-libgcc-libstdc.txt",
+    "source": "https://raw.githubusercontent.com/gcc-mirror/gcc/master/COPYING.RUNTIME"
+  },
+  {
+    "name": "GIFLIB",
+    "files": "libgif-7.dll",
+    "license": "MIT",
+    "text": "giflib.txt",
+    "source": "https://sourceforge.net/p/giflib/code/ci/master/tree/COPYING?format=raw"
+  },
+  {
+    "name": "GNU libiconv",
+    "files": "libiconv-2.dll",
+    "license": "LGPL-2.1-or-later",
+    "text": "gnu-libiconv.txt",
+    "source": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt"
+  },
+  {
+    "name": "JBIG-KIT",
+    "files": "libjbig-0.dll",
+    "license": "GPL-2.0-or-later",
+    "text": "jbig-kit.txt",
+    "source": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt"
+  },
+  {
+    "name": "libjpeg-turbo",
+    "files": "libjpeg-8.dll",
+    "license": "IJG AND BSD-3-Clause AND Zlib",
+    "text": "libjpeg-turbo.txt",
+    "source": "https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/main/LICENSE.md"
+  },
+  {
+    "name": "LERC",
+    "files": "libLerc.dll",
+    "license": "Apache-2.0",
+    "text": "lerc.txt",
+    "source": "https://raw.githubusercontent.com/Esri/lerc/master/LICENSE"
+  },
+  {
+    "name": "LZ4",
+    "files": "liblz4.dll",
+    "license": "BSD-2-Clause",
+    "text": "lz4.txt",
+    "source": "https://raw.githubusercontent.com/lz4/lz4/v1.9.4/lib/LICENSE"
+  },
+  {
+    "name": "XZ Utils (liblzma)",
+    "files": "liblzma-5.dll",
+    "license": "0BSD",
+    "text": "xz-utils-liblzma.txt",
+    "source": "https://raw.githubusercontent.com/tukaani-project/xz/v5.6.2/COPYING"
+  },
+  {
+    "name": "OpenJPEG",
+    "files": "libopenjp2-7.dll",
+    "license": "BSD-2-Clause",
+    "text": "openjpeg.txt",
+    "source": "https://raw.githubusercontent.com/uclouvain/openjpeg/master/LICENSE"
+  },
+  {
+    "name": "libpng",
+    "files": "libpng16-16.dll",
+    "license": "libpng-2.0",
+    "text": "libpng.txt",
+    "source": "https://raw.githubusercontent.com/pnggroup/libpng/libpng16/LICENSE"
+  },
+  {
+    "name": "libwebp (incl. sharpyuv)",
+    "files": "libwebp-7.dll, libwebpmux-3.dll, libsharpyuv-0.dll",
+    "license": "BSD-3-Clause",
+    "text": "libwebp-incl-sharpyuv.txt",
+    "source": "https://raw.githubusercontent.com/webmproject/libwebp/main/COPYING"
+  },
+  {
+    "name": "LibTIFF",
+    "files": "libtiff-6.dll",
+    "license": "libtiff",
+    "text": "libtiff.txt",
+    "source": "https://gitlab.com/libtiff/libtiff/-/raw/master/LICENSE.md"
+  },
+  {
+    "name": "MinGW-w64 winpthreads",
+    "files": "libwinpthread-1.dll",
+    "license": "MIT AND BSD-3-Clause",
+    "text": "mingw-w64-winpthreads.txt",
+    "source": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/master/mingw-w64-libraries/winpthreads/COPYING"
+  },
+  {
+    "name": "Zstandard",
+    "files": "libzstd.dll",
+    "license": "BSD-3-Clause",
+    "text": "zstandard.txt",
+    "source": "https://raw.githubusercontent.com/facebook/zstd/dev/LICENSE"
+  },
+  {
+    "name": "zlib",
+    "files": "zlib1.dll",
+    "license": "Zlib",
+    "text": "zlib.txt",
+    "source": "https://raw.githubusercontent.com/madler/zlib/master/LICENSE"
+  }
+]

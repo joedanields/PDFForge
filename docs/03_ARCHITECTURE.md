@@ -112,18 +112,26 @@ Rules (protocol version 1):
 engine/
 ├── main.py                # JSON-RPC loop, dispatcher
 ├── jobs.py                # queue, cancellation tokens, progress
-├── tools/
+├── worker.py              # per-job worker process (Job Object memory cap)
+├── tools/                 # __init__.py maps method → module:function, imported lazily
 │   ├── organize.py        # merge, split, remove, extract, organize, rotate
-│   ├── optimize.py        # compress, repair, ocr
-│   ├── to_pdf.py          # image, office, html, text
-│   ├── from_pdf.py        # images, word, ppt, excel, pdfa, text
-│   ├── edit.py            # page numbers, watermark, crop, apply-annotations, forms
-│   ├── security.py        # protect, unlock, sign, redact
-│   └── compare.py
-├── adapters/
-│   ├── libreoffice.py     # temp profile dir, timeout, kill on cancel
-│   └── tesseract.py
-├── utils/ (paths, naming, temp files, page ranges parser, validation)
+│   ├── optimize.py        # compress, repair
+│   ├── ocr.py             # OCR (Tesseract text layer, auto-rotate, deskew)
+│   ├── to_pdf.py          # image, html, text/markdown
+│   ├── office.py          # word, powerpoint, excel → pdf (LibreOffice)
+│   ├── from_pdf.py        # pdf → images
+│   ├── pdf_office.py      # pdf → word, excel, powerpoint, text
+│   ├── pdfa.py            # pdf → pdf/a
+│   ├── edit.py            # page numbers, watermark (later: crop, annotations, forms)
+│   ├── security.py        # protect, unlock (later: sign, redact)
+│   └── debug.py           # echo self-test
+├── utils/
+│   ├── libreoffice.py     # hardened per-run profile, short paths, kill on cancel
+│   ├── tesseract.py       # OCR runs, language folders
+│   ├── process.py         # helper programs inside the job (cancel / timeout kill)
+│   ├── vendor.py          # where vendor/ is (installed vs dev)
+│   ├── layout.py          # page text → lines / paragraphs for PDF → Office
+│   └── …                  # paths, naming, atomic commit, page ranges, validation, overlays
 └── tests/
 ```
 

@@ -42,6 +42,19 @@ const JOBS = {
   compress: { inputs: [f("bigscan.pdf")], options: { level: "recommended" } },
   protect: { inputs: [f("mixed.pdf")], secrets: { user_password: "release-pw" } },
   unlock: { inputs: [f("secret.pdf")], passwords: { [f("secret.pdf")]: "pw123" } },
+  // Phase 2: bundled LibreOffice and Tesseract, Office libraries in the frozen engine.
+  "word-to-pdf": { inputs: [f("report.docx")] },
+  "powerpoint-to-pdf": { inputs: [f("deck.pptx")], options: { include_notes: true } },
+  "excel-to-pdf": { inputs: [f("book.xlsx")], options: { fit_width: true, sheets: "active" } },
+  "html-to-pdf": { inputs: [f("site/index.html")] },
+  "text-to-pdf": { inputs: [f("notes.md")] },
+  "pdf-to-word": { inputs: [f("invoice-scan.pdf")], options: { ocr: true, languages: ["eng"] } },
+  "pdf-to-excel": { inputs: [f("annual.pdf")] },
+  "pdf-to-powerpoint": { inputs: [f("annual.pdf")] },
+  "pdf-to-text": { inputs: [f("annual.pdf")] },
+  "pdf-to-pdfa": { inputs: [f("annual.pdf")] },
+  repair: { inputs: [f("damaged.pdf")] },
+  ocr: { inputs: [f("invoice-scan.pdf")], options: { languages: "eng+tam" } },
 };
 
 const browser = await chromium.connectOverCDP("http://127.0.0.1:9222");

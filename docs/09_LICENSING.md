@@ -42,11 +42,18 @@
 | Rust crates linked into the app (~250, incl. rusqlite/SQLite) | mostly MIT / Apache-2.0; a few BSD-3-Clause, MPL-2.0, Unicode-3.0 | ✅ |
 | NSIS installer stub | zlib/libpng, bzip2, CPL-1.0 | ✅ |
 | WebView2 bootstrapper (embedded in the installer) | Microsoft distribution terms | ✅ permitted redistribution |
+| LibreOffice 26.2 (bundled in `vendor/`, Phase 2) | MPL-2.0 + bundled third-party licences | ✅ unmodified (only unused parts removed), runs as a separate program; its own license.txt is included in the notices |
+| Liberation / Carlito / Caladea fonts (part of LibreOffice) | SIL OFL 1.1 | ✅ also embedded into PDF/A results as metric-compatible replacements for standard fonts (OFL permits embedding) |
+| Tesseract OCR 5.4 + tessdata_fast models (eng, osd, tam, hin) | Apache-2.0 | ✅ separate program |
+| Libraries inside the Tesseract Windows build (Leptonica, libtiff, libpng, libjpeg-turbo, libwebp, OpenJPEG, giflib, zlib, zstd, xz, lz4, bzip2, libarchive, libb2, libdeflate, expat, LERC, OpenSSL, GCC runtime, winpthreads) | BSD / MIT / zlib / libpng / IJG / Apache-2.0 / GPL-3.0 with GCC runtime exception | ✅ texts in `third_party/licenses/tesseract-runtime` |
+| GNU libiconv (inside the Tesseract build) | LGPL-2.1-or-later | ✅ unmodified, separate library; source offer (§4) |
+| JBIG-KIT (`libjbig`, inside the Tesseract build, pulled in by libtiff) | GPL-2.0-or-later | ⚠️ acceptable as part of a separate program (aggregation), **source offer required** (§4); see DECISIONS D-013 — replace with a libtiff built without JBIG if the owner prefers |
+| python-docx, python-pptx, openpyxl, et-xmlfile | MIT | ✅ (Phase 2) |
 
 `THIRD_PARTY_NOTICES.txt` is generated from what a build actually ships by
 `scripts/generate_notices.py` (engine bundle analysis, production UI bundle, Rust dependency
-graph). pdfplumber, pdfminer.six, cryptography and pypdf are installed but not yet imported by
-any tool, so they are not shipped (yet); they will appear automatically once a tool uses them.
+graph, the vendored LibreOffice and Tesseract, installer parts). Since Phase 2 pdfplumber,
+pdfminer.six and pypdf are used by tools and therefore shipped.
 
 ## 3. AGPL decision (choose one)
 1. **Open-source your app under AGPL-3.0** — simplest if it's a free/personal project.
@@ -60,14 +67,17 @@ any tool, so they are not shipped (yet); they will appear automatically once a t
 - Not used or bundled: Ghostscript, MuPDF / PyMuPDF, pdf2docx (and anything that pulls them in).
 - Compress (B1): pikepdf + Pillow — downsample images to the level's DPI, re-encode JPEG,
   optional grayscale, strip metadata, remove unused objects.
-- PDF/A (D5): pikepdf + veraPDF validation, or skipped if that is not reliable enough.
+- PDF/A (D5): pikepdf (PDF/A-2b/3b); results validated with veraPDF on the development
+  machine (not shipped: it needs Java). Files needing re-rendering are refused (DECISIONS D-024).
 - PDF → Word (D2): own converter on pdfplumber + python-docx.
-- OCR (B3) and camelot: use only code paths that do not require Ghostscript (re-check in Phase 2).
+- OCR (B3): own pipeline — PDFium rendering + Tesseract's text-only PDF output laid over the
+  page with pikepdf; no OCRmyPDF (it needs Ghostscript) (D-026). camelot is not used (its
+  lattice mode needs Ghostscript); PDF → Excel uses pdfplumber (D-018).
 - New dependencies are checked against this rule before they are added.
 
 ## 4. Obligations checklist
 - [x] Ship `THIRD_PARTY_NOTICES.txt` with all licenses (generated, bundled in the installer); show it in Settings → About (viewer: later phase).
-- [ ] Provide source/offer for any LGPL/MPL/AGPL components as required.
+- [ ] Provide source/offer for any LGPL/MPL/AGPL components as required. **Now concrete:** LibreOffice (MPL), libiconv / img2pdf / libheif / libde265 (LGPL) and JBIG-KIT (GPL-2.0) — publish a written offer (or a source mirror) before distributing.
 - [ ] Privacy policy stating local-only processing (needed for any store listing).
 - [ ] EULA in the installer.
 - [ ] Unlock tool limited to files the user has the password/right to open.
