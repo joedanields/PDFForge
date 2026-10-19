@@ -730,6 +730,54 @@ if (section("ocr")) {
   );
 }
 
+if (section("viewer")) {
+  console.log("Viewer");
+  await go("#/");
+  await page.getByRole("button", { name: "Open PDF" }).click();
+  await page.getByRole("button", { name: "Open PDF…" }).waitFor();
+  ok("Open PDF shows the viewer's start screen");
+  const file = join(inputDir, "mixed.pdf");
+  await go(`#/view?path=${encodeURIComponent(file)}`);
+  const viewer = page.getByTestId("viewer-container");
+  await page.waitForFunction(
+    () => document.querySelectorAll("[data-testid=viewer-container] .page canvas").length >= 1,
+    null,
+    { timeout: 30_000 },
+  );
+  expect((await viewer.locator(".page").count()) === 5, "5 pages laid out");
+  expect(
+    (await page
+      .getByRole("navigation", { name: "Page thumbnails" })
+      .getByRole("listitem")
+      .count()) === 5,
+    "5 thumbnails",
+  );
+  await page.getByRole("button", { name: "Next page" }).click();
+  await page.waitForFunction(
+    () => document.querySelector("input[aria-label='Page number']")?.value === "2",
+  );
+  ok("next page → page 2");
+  await page.getByLabel("Zoom", { exact: true }).selectOption("2");
+  await page.waitForFunction(() => {
+    const first = document.querySelector("[data-testid=viewer-container] .page");
+    return first !== null && first.getBoundingClientRect().width > 1000;
+  });
+  ok("zoom 200%");
+  await page.keyboard.press("Control+f");
+  await page.getByLabel("Search in document").fill("page");
+  await page.keyboard.press("Enter");
+  await page.getByText(/^\d+ of 5$/).waitFor({ timeout: 15_000 });
+  ok("find: match counter shown");
+  expect(
+    (await page.locator(".textLayer .highlight").count()) >= 1,
+    "match highlighted in text layer",
+  );
+  await page.getByRole("button", { name: "Use in a tool" }).click();
+  await page.getByRole("button", { name: "Rotate PDF", exact: true }).click();
+  await tile(5).waitFor({ timeout: 30_000 });
+  ok("Use in a tool → Rotate PDF with the file loaded");
+}
+
 if (!only || only.has("echo") || echoOnly) {
   console.log("Engine self-test (Echo)");
   await go("#/tool/echo");

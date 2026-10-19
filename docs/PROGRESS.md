@@ -4,10 +4,22 @@
 
 ## Now
 
-- **Current phase:** Phase 3 — Editing & security (Phase 2 done)
-- **Working on:** Phase 3.0 — built-in viewer
+- **Current phase:** Phase 3 — Editing & security (Phases 1 and 2 done)
+- **Working on:** 3.1 Edit PDF
 
-## Phase 2 — Conversions
+## Phase 3 — Editing & security
+
+| Tool | Status | Tests | Commit | Notes |
+|------|--------|-------|--------|-------|
+| 3.0 Built-in viewer + "Open with PDFForge" (.pdf association) | done | Rust launch (2), smoke `viewer` | (this commit) | pdf.js viewer: thumbnails, zoom, find, page navigation, hand-off to tools; D-028 |
+| 3.1 Edit PDF (E1) | todo | | | |
+| 3.2 Sign PDF (F3) | todo | | | |
+| 3.3 Crop PDF (E4) | todo | | | |
+| 3.4 Redact PDF (F4) — true redaction | todo | | | |
+| 3.5 Compare PDF (F5) | todo | | | |
+| 3.6 Phase 3 installer + release smoke (v1.0 exit) | todo | | | |
+
+## Phase 2 — Conversions (done)
 
 | Tool | Status | Tests | Commit | Notes |
 |------|--------|-------|--------|-------|
@@ -19,7 +31,7 @@
 | 2.5 HTML → PDF (C5) | done | test_html_to_pdf (6), smoke `html` | 8723d7b | LibreOffice on a self-contained, script-free copy; local files only; D-023 |
 | 2.6 PDF → PDF/A (D5) | done | test_pdfa (7, veraPDF-validated on the dev machine), smoke `pdfa` | 09dc272 | PDF/A-2b/3b with pikepdf, no Ghostscript; CMYK / unembeddable fonts refused; D-024. Also: lazy tool loading cuts ~2.4 s off every job (D-025) |
 | 2.7 OCR (B3) + OCR languages in Settings | done | test_ocr (11), Rust ocr (3), vitest ocrLanguages (4), smoke `ocr` | b7137bc | Tesseract text-only layer, auto-rotate, deskew, parallel pages (P6 met); D-026, D-027 |
-| 2.8 Notices, Phase 2 installer + release smoke | done | full suite + release smoke (Echo + all 25 tools in the built exe) | (this commit) | installer 184.5 MB (176 MiB) incl. LibreOffice + Tesseract; notices cover vendor/ (D-013) |
+| 2.8 Notices, Phase 2 installer + release smoke | done | full suite + release smoke (Echo + all 25 tools in the built exe) | 820f6da | installer 184.5 MB (176 MiB) incl. LibreOffice + Tesseract; notices cover vendor/ (D-013) |
 
 ## Phase 1 — Core PDF tools (done)
 
@@ -42,11 +54,12 @@
 
 ## For the owner (decide / do on return)
 
-- Review [DECISIONS.md](DECISIONS.md) — in particular D-013 (GPL/LGPL DLLs inside the Tesseract build).
+- Review [DECISIONS.md](DECISIONS.md) — in particular D-013 (GPL/LGPL DLLs inside the Tesseract
+  build) and the source-offer item in docs/09 §4.
 - Installed for the build (inside the repo, nothing system-wide): 7-Zip 26.04 extracted to
   `vendor/_tools/7zip` (only used to unpack the Tesseract installer). Python packages added to
   the engine: python-docx, python-pptx, openpyxl (+ stub packages lxml-stubs, types-openpyxl
-  for type checking).
+  for type checking). Rust crate added: tauri-plugin-single-instance (MIT/Apache-2.0).
 - Development-only validator (not shipped, git-ignored): Eclipse Temurin JRE 21.0.12 (zip,
   SHA-256 checked against Adoptium) in `vendor/_tools/jre` and veraPDF 1.30.3 (headless
   installer) in `vendor/_tools/verapdf`. Tests use them when present to validate PDF/A output.

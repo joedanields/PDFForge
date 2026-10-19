@@ -1,5 +1,6 @@
 import {
   CircleCheck,
+  Eye,
   FileText,
   FolderOpen,
   Info,
@@ -14,6 +15,7 @@ import { api } from "@/engine/client";
 import type { DoneEvent } from "@/engine/types";
 import { t } from "@/i18n";
 import { dirName, fileName, formatBytes } from "@/lib/utils";
+import { viewerPath } from "@/lib/viewer";
 import { getTool } from "@/tools/registry";
 
 interface Props {
@@ -167,6 +169,12 @@ export function ResultCard({ result, summary = null, combined = false, onStartOv
                 <FileText aria-hidden />
                 {t("result.open")}
               </Button>
+              {first.toLowerCase().endsWith(".pdf") && (
+                <Button size="lg" variant="secondary" onClick={() => navigate(viewerPath(first))}>
+                  <Eye aria-hidden />
+                  {t("result.view")}
+                </Button>
+              )}
               <Button size="lg" variant="secondary" onClick={() => run(api.revealOutput, first)}>
                 <FolderOpen aria-hidden />
                 {t("result.reveal")}

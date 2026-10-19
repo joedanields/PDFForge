@@ -25,6 +25,7 @@ tokio = { version = "1", features = ["process", "io-util", "sync", "time", "macr
 rusqlite = { version = "0.32", features = ["bundled"] }
 thiserror = "2"
 uuid = { version = "1", features = ["v4"] }
+tauri-plugin-single-instance = "2"
 
 [dev-dependencies]
 tempfile = "3"

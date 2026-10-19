@@ -1,4 +1,4 @@
-import { Clock, Search, Settings, Workflow } from "lucide-react";
+import { Clock, FolderOpen, Search, Settings, Workflow } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
@@ -28,6 +28,10 @@ export function TopBar({ onSearch }: Props) {
         </button>
         <div className="ml-auto flex items-center gap-1">
           <EngineStatusPill />
+          <Button variant="ghost" size="sm" onClick={() => navigate("/view")}>
+            <FolderOpen aria-hidden />
+            {t("nav.open")}
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => navigate("/?view=recent")}>
             <Clock aria-hidden />
             {t("nav.recent")}

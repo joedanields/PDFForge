@@ -1,6 +1,7 @@
 mod commands;
 pub mod db;
 pub mod engine;
+pub mod launch;
 pub mod ocr;
 pub mod settings;
 
@@ -122,6 +123,18 @@ fn engine_command(app: &AppHandle) -> EngineCommand {
 
 pub fn run() {
     let app = tauri::Builder::default()
+        // Must be the first plugin: a second launch ("Open with PDFForge") hands its files to
+        // this instance and exits.
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+            let files = launch::pdf_args(argv);
+            if !files.is_empty() {
+                let _ = app.emit(launch::OPEN_EVENT, files);
+            }
+        }))
         .plugin(log_plugin())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -130,6 +143,7 @@ pub fn run() {
             let db = Arc::new(Db::open(&data.join("app.db"))?);
             app.manage(SettingsStore::load(data.join("settings.json")));
             app.manage(db.clone());
+            app.manage(launch::PendingOpen::new(launch::pdf_args(std::env::args())));
 
             let handle = app.handle().clone();
             let sink = Arc::new(AppSink {
@@ -156,6 +170,7 @@ pub fn run() {
             commands::open_notices,
             commands::read_input_file,
             commands::file_stats,
+            launch::take_open_requests,
             ocr::ocr_languages,
             ocr::add_ocr_language,
             ocr::remove_ocr_language,

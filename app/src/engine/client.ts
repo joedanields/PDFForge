@@ -21,6 +21,7 @@ export const EVENTS = {
   engine: "engine://event",
   status: "engine://status",
   recentsChanged: "recents://changed",
+  openFiles: "app://open-files",
 } as const;
 
 export function isTauri(): boolean {
@@ -105,6 +106,7 @@ export const api = {
   openNotices: () => invoke<undefined>("open_notices"),
   fileStats: (paths: string[]) => invoke<FileStat[]>("file_stats", { paths }),
   readInputFile: (path: string) => invoke<ArrayBuffer>("read_input_file", { path }),
+  takeOpenRequests: () => invoke<string[]>("take_open_requests"),
   ocrLanguages: () => invoke<OcrLanguage[]>("ocr_languages"),
   addOcrLanguage: (path: string) => invoke<OcrLanguage[]>("add_ocr_language", { path }),
   removeOcrLanguage: (code: string) => invoke<OcrLanguage[]>("remove_ocr_language", { code }),
@@ -112,6 +114,13 @@ export const api = {
 
 export function onEngineStatus(cb: (status: EngineStatus) => void): Promise<UnlistenFn> {
   return listen<EngineStatus>(EVENTS.status, ({ payload }) => {
+    cb(payload);
+  });
+}
+
+/** PDFs passed to a second launch ("Open with PDFForge" while the app is running). */
+export function onOpenFiles(cb: (files: string[]) => void): Promise<UnlistenFn> {
+  return listen<string[]>(EVENTS.openFiles, ({ payload }) => {
     cb(payload);
   });
 }

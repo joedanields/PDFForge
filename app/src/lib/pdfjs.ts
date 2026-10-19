@@ -139,6 +139,46 @@ export interface PageSize {
   height: number;
 }
 
+export type DocumentResult =
+  | { kind: "ok"; doc: pdfjs.PDFDocumentProxy }
+  | { kind: "locked"; wrongPassword: boolean }
+  | { kind: "error" };
+
+/** Open a PDF from disk (through `read_input_file`) with scripting and XFA disabled. */
+export async function openDocument(path: string, password?: string): Promise<DocumentResult> {
+  let bytes: ArrayBuffer;
+  try {
+    bytes = await api.readInputFile(path);
+  } catch {
+    return { kind: "error" };
+  }
+  const task = pdfjs.getDocument({
+    data: new Uint8Array(bytes),
+    password,
+    isEvalSupported: false,
+    enableXfa: false,
+  });
+  try {
+    return { kind: "ok", doc: await task.promise };
+  } catch (err) {
+    await task.destroy();
+    if (isPasswordError(err)) {
+      return {
+        kind: "locked",
+        wrongPassword: err.code === pdfjs.PasswordResponses.INCORRECT_PASSWORD,
+      };
+    }
+    return { kind: "error" };
+  }
+}
+
+/** pdf.js's viewer components (continuous scroll, text layer, find); they read the core
+ * library from `globalThis.pdfjsLib`, so it is set before the module is loaded. */
+export async function loadViewer(): Promise<typeof import("pdfjs-dist/web/pdf_viewer.mjs")> {
+  (globalThis as { pdfjsLib?: unknown }).pdfjsLib = pdfjs;
+  return import("pdfjs-dist/web/pdf_viewer.mjs");
+}
+
 export type OpenResult =
   | { kind: "ok"; source: PdfSource }
   | { kind: "locked"; wrongPassword: boolean }
@@ -156,30 +196,8 @@ export class PdfSource {
   ) {}
 
   static async open(path: string, password?: string): Promise<OpenResult> {
-    let bytes: ArrayBuffer;
-    try {
-      bytes = await api.readInputFile(path);
-    } catch {
-      return { kind: "error" };
-    }
-    const task = pdfjs.getDocument({
-      data: new Uint8Array(bytes),
-      password,
-      isEvalSupported: false,
-      enableXfa: false,
-    });
-    try {
-      return { kind: "ok", source: new PdfSource(await task.promise, path) };
-    } catch (err) {
-      await task.destroy();
-      if (isPasswordError(err)) {
-        return {
-          kind: "locked",
-          wrongPassword: err.code === pdfjs.PasswordResponses.INCORRECT_PASSWORD,
-        };
-      }
-      return { kind: "error" };
-    }
+    const res = await openDocument(path, password);
+    return res.kind === "ok" ? { kind: "ok", source: new PdfSource(res.doc, path) } : res;
   }
 
   get numPages(): number {
