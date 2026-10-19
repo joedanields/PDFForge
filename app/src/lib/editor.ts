@@ -281,3 +281,10 @@ export function historyReducer(
       return { ...EMPTY_HISTORY, pending: null };
   }
 }
+
+// ── crop ──────────────────────────────────────────────────────────────────────────────────
+
+/** Crop area as fractions of the displayed page: [left, top, right, bottom]. */
+export type CropBox = [number, number, number, number];
+
+export const DEFAULT_CROP_BOX: CropBox = [0.05, 0.05, 0.95, 0.95];

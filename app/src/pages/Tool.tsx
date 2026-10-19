@@ -6,6 +6,7 @@ import { DropZone } from "@/components/DropZone";
 import { FileList } from "@/components/FileList";
 import { OptionsForm } from "@/components/OptionsForm";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
+import { CropBoard } from "@/components/editor/CropBoard";
 import { EditorBoard } from "@/components/editor/EditorBoard";
 import { SignBoard } from "@/components/editor/SignBoard";
 import { OrganizeBoard, type OrganizePlan } from "@/components/OrganizeBoard";
@@ -16,7 +17,12 @@ import { Button } from "@/components/ui/button";
 import { JobError, api, isTauri, runJob, type RunningJob } from "@/engine/client";
 import { ERROR_TEXT, type DoneEvent, type ErrorEvent } from "@/engine/types";
 import { t } from "@/i18n";
-import { type EditObject, toEngine as editorToEngine } from "@/lib/editor";
+import {
+  type CropBox,
+  DEFAULT_CROP_BOX,
+  type EditObject,
+  toEngine as editorToEngine,
+} from "@/lib/editor";
 import { fileKey, sortByDate, sortByName, type InputFile } from "@/lib/files";
 import { parsePageSet } from "@/lib/pageRanges";
 import { useAppStore } from "@/lib/store";
@@ -128,6 +134,9 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   const pageTool = tool.layout === "pages";
   const organizeTool = tool.layout === "organize";
   const [organizePlan, setOrganizePlan] = useState<OrganizePlan | null>(null);
+  const cropTool = tool.layout === "crop";
+  const [cropBox, setCropBox] = useState<CropBox>(DEFAULT_CROP_BOX);
+  const [cropPage, setCropPage] = useState(0);
   const signTool = tool.layout === "sign";
   const editorTool = tool.layout === "editor" || signTool;
   const [editorObjects, setEditorObjects] = useState<EditObject[]>([]);
@@ -398,7 +407,14 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     const converted = tool.toEngine ? tool.toEngine(plain) : plain;
     const engineOptions = editorTool
       ? { ...converted, objects: editorObjects.map(editorToEngine) }
-      : converted;
+      : cropTool
+        ? {
+            mode: converted.mode,
+            margin: converted.margin,
+            box: cropBox,
+            pages: converted.apply === "current" ? String(cropPage + 1) : "all",
+          }
+        : converted;
     await execute(tool.engineMethod, {
       options: engineOptions,
       ...(Object.keys(secrets).length > 0 && { secrets }), // never stored in history
@@ -495,6 +511,18 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
               disabled={!editing}
             />
           )}
+          {cropTool && files[0]?.status === "ready" && (
+            <CropBoard
+              key={files[0].key}
+              file={files[0]}
+              box={cropBox}
+              onBox={setCropBox}
+              page={cropPage}
+              onPage={setCropPage}
+              showBox={options.mode !== "auto"}
+              disabled={!editing}
+            />
+          )}
           {signTool && files[0]?.status === "ready" && (
             <SignBoard
               key={files[0].key}
@@ -523,7 +551,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
           )}
           {needsFiles &&
             files.length > 0 &&
-            !((pageTool || editorTool) && files[0]?.status === "ready") &&
+            !((pageTool || editorTool || cropTool) && files[0]?.status === "ready") &&
             !(organizeTool && files.every((f) => f.status === "ready")) && (
               <>
                 <FileList
@@ -537,14 +565,18 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
                   onSortByName={() => setFiles(sortByName)}
                   onSortByDate={() => setFiles(sortByDate)}
                 />
-                {files.length < tool.accepts.max && !pageTool && !organizeTool && !editorTool && (
-                  <DropZone
-                    compact
-                    over={over}
-                    acceptedLabel={tool.accepts.label}
-                    onSelect={() => void selectFiles()}
-                  />
-                )}
+                {files.length < tool.accepts.max &&
+                  !pageTool &&
+                  !organizeTool &&
+                  !editorTool &&
+                  !cropTool && (
+                    <DropZone
+                      compact
+                      over={over}
+                      acceptedLabel={tool.accepts.label}
+                      onSelect={() => void selectFiles()}
+                    />
+                  )}
               </>
             )}
           {!needsFiles && (

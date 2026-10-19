@@ -5,7 +5,7 @@
 ## Now
 
 - **Current phase:** Phase 3 — Editing & security (Phases 1 and 2 done)
-- **Working on:** 3.3 Crop PDF
+- **Working on:** 3.4 Redact PDF
 
 ## Phase 3 — Editing & security
 
@@ -13,8 +13,8 @@
 |------|--------|-------|--------|-------|
 | 3.0 Built-in viewer + "Open with PDFForge" (.pdf association) | done | Rust launch (2), smoke `viewer` | 5c70b0d | pdf.js viewer: thumbnails, zoom, find, page navigation, hand-off to tools; D-028 |
 | 3.1 Edit PDF (E1) | done | test_edit_pdf (13), vitest editor (7), smoke `edit` | 2cbf204 | editor: text, pictures, shapes, arrows, pen, highlighter, notes, eraser, undo/redo, zoom; flatten or annotations; D-029 |
-| 3.2 Sign PDF (F3) | done | test_sign (6), Rust signatures (3), smoke `sign` | (this commit) | type / draw / upload, initials, date, text; DPAPI-encrypted saved signatures; D-030 |
-| 3.3 Crop PDF (E4) | todo | | | |
+| 3.2 Sign PDF (F3) | done | test_sign (6), Rust signatures (3), smoke `sign` | f4ba28d | type / draw / upload, initials, date, text; DPAPI-encrypted saved signatures; D-030 |
+| 3.3 Crop PDF (E4) | done | test_crop (9), smoke `crop` | (this commit) | draw the area with corner handles, this page / all pages, auto-trim white margins; D-031 |
 | 3.4 Redact PDF (F4) — true redaction | todo | | | |
 | 3.5 Compare PDF (F5) | todo | | | |
 | 3.6 Phase 3 installer + release smoke (v1.0 exit) | todo | | | |

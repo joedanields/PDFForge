@@ -203,6 +203,7 @@ export const en = {
   "sign.empty": "Place your signature on a page first.",
   "settings.clearSignatures": "Delete saved signatures",
   "settings.signaturesCleared": "Saved signatures deleted.",
+  "crop.canvas": "Page {page} — drag to choose the area to keep",
   "settings.ocrLanguages": "OCR languages",
   "settings.ocrHelp":
     "Languages text recognition can read. English, Tamil and Hindi are included. To add another, download its .traineddata file (for example from the tessdata_fast collection of the Tesseract project) and choose it here — PDFForge never downloads anything itself.",

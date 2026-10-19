@@ -14,6 +14,7 @@ from jobs import ToolFn
 
 _TARGETS: dict[str, str] = {
     "compress": "optimize:compress",
+    "crop": "edit:crop",
     "echo": "debug:echo",
     "edit-pdf": "editor:edit_pdf",
     "excel-to-pdf": "office:excel_to_pdf",

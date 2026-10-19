@@ -40,6 +40,7 @@ const AVAILABLE = [
   "ocr",
   "edit-pdf",
   "sign",
+  "crop",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -857,6 +858,34 @@ if (section("sign")) {
   const text = await runAndWait("Sign and save");
   expect(text.includes("2 items signed onto the document"), "signed");
   expect(/mixed_signed( \(\d+\))?\.pdf/.test(text), "output mixed_signed.pdf");
+}
+
+if (section("crop")) {
+  console.log("Crop PDF");
+  await go("#/tool/crop");
+  await addFiles("mixed.pdf");
+  const canvas = page.getByTestId("crop-canvas");
+  await canvas.waitFor({ timeout: 30_000 });
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("crop canvas has no size");
+  const handle = await page.getByTestId("crop-handle-tl").boundingBox();
+  if (!handle) throw new Error("crop handle missing");
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.25, box.y + box.height * 0.2, { steps: 8 });
+  await page.mouse.up();
+  await page.getByRole("radio", { name: "This page" }).click();
+  await shot("crop-ready");
+  const one = await runAndWait("Crop PDF");
+  expect(one.includes("Cropped 1 of 5 pages"), "drawn area applied to this page");
+  await startOver();
+  await addFiles("mixed.pdf");
+  await canvas.waitFor({ timeout: 30_000 });
+  await page.getByRole("radio", { name: "Trim white margins" }).click();
+  await page.getByRole("radio", { name: "All pages" }).click();
+  await page.getByText("Keep a margin of (pt)").waitFor();
+  const all = await runAndWait("Crop PDF");
+  expect(all.includes("Cropped 5 of 5 pages"), "white margins trimmed on every page");
 }
 
 if (!only || only.has("echo") || echoOnly) {

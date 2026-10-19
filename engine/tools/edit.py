@@ -1,4 +1,4 @@
-"""Edit tools (docs/02_FEATURES.md §E). Phase 1: Add page numbers (E2) and Add watermark (E3).
+"""Edit tools (docs/02_FEATURES.md §E): page numbers (E2), watermark (E3) and crop (E4).
 
 Both stamp an overlay (drawn with ReportLab) onto existing pages with pikepdf — page content is
 not re-rendered, and the file keeps its password/permissions.
@@ -11,7 +11,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from pikepdf import Pdf
+import pypdfium2 as pdfium
+from pikepdf import Array, Pdf
 from PIL import Image, ImageOps
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -20,6 +21,7 @@ from reportlab.pdfgen import canvas
 from jobs import JobContext, ToolResult
 from protocol import EngineError, ErrorCode
 from utils.overlay import GRID_POSITIONS, anchor_point, frame_of, mirror
+from utils.pageinfo import display_rect_to_page, displayed_size, visible_box
 from utils.pdfio import deliver_pdf, open_pdf, save_pdf, single_pdf_input
 from utils.ranges import parse_page_set
 from utils.validation import (
@@ -305,3 +307,98 @@ def watermark(params: dict[str, Any], ctx: JobContext) -> ToolResult:
             "bytes": final.stat().st_size,
         },
     )
+
+
+# ── Crop (E4) ─────────────────────────────────────────────────────────────────────────────
+
+CROP_MIN_PT = 18.0  # never crop a page smaller than a quarter inch
+TRIM_THRESHOLD = 245  # rendered grey levels above this count as white margin
+
+
+def _fraction_box(raw: Any) -> tuple[float, float, float, float]:
+    """``[left, top, right, bottom]`` fractions of the displayed page, validated."""
+    if (
+        not isinstance(raw, list)
+        or len(raw) != 4
+        or not all(isinstance(v, int | float) and not isinstance(v, bool) for v in raw)
+    ):
+        raise EngineError(ErrorCode.INVALID_INPUT, "Draw the area to keep on the page")
+    left, top, right, bottom = (min(1.0, max(0.0, float(v))) for v in raw)
+    if right - left < 0.02 or bottom - top < 0.02:
+        raise EngineError(ErrorCode.INVALID_INPUT, "The crop area is too small")
+    return left, top, right, bottom
+
+
+def content_box(image: Image.Image) -> tuple[float, float, float, float] | None:
+    """Fractions (left, top, right, bottom) of the non-white part of a rendered page."""
+    gray = image.convert("L")
+    ink = gray.point(lambda v: 255 if v < TRIM_THRESHOLD else 0)
+    bbox = ink.getbbox()
+    if bbox is None:
+        return None
+    w, h = gray.size
+    return bbox[0] / w, bbox[1] / h, bbox[2] / w, bbox[3] / h
+
+
+def _to_display_points(
+    page: Any, box: tuple[float, float, float, float]
+) -> tuple[float, float, float, float]:
+    width, height = displayed_size(page)
+    left, top, right, bottom = box
+    return left * width, (1 - bottom) * height, right * width, (1 - top) * height
+
+
+def crop(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Set the CropBox of the selected pages — lossless: content outside is hidden, not
+    removed (02 E4). ``mode`` "box": keep ``box`` (fractions of the displayed page, drawn on
+    the preview); "auto": trim each page's white margins, keeping ``margin`` points around
+    the content."""
+    source = single_pdf_input(params)
+    options = options_dict(params)
+    mode = option_choice(options, "mode", ("box", "auto"), "box")
+    margin = option_float(options, "margin", 6.0, lo=0.0, hi=144.0)
+    box = _fraction_box(options.get("box")) if mode == "box" else None
+    tmp = ctx.temp_dir / "cropped.pdf"
+    with open_pdf(source, passwords_map(params)) as pdf:
+        total = len(pdf.pages)
+        selected = parse_page_set(option_str(options, "pages", "all", max_len=2000), total)
+        boxes: dict[int, tuple[float, float, float, float] | None] = {}
+        if mode == "auto":
+            plain = ctx.temp_dir / "plain.pdf"
+            pdf.save(plain)
+            doc = pdfium.PdfDocument(str(plain))
+            try:
+                for n, index in enumerate(selected):
+                    ctx.check_cancelled()
+                    ctx.progress(5 + 70 * n / max(1, len(selected)), f"Measuring page {index + 1}")
+                    rendered = doc[index]
+                    try:
+                        bitmap = rendered.render(scale=100 / 72, grayscale=True)
+                        boxes[index] = content_box(bitmap.to_pil())
+                    finally:
+                        rendered.close()
+            finally:
+                doc.close()
+        cropped = 0
+        for index in selected:
+            page = pdf.pages[index]
+            fractions = box if box is not None else boxes.get(index)
+            if fractions is None:
+                continue  # an empty page has nothing to trim to
+            x0, y0, x1, y1 = display_rect_to_page(page, _to_display_points(page, fractions))
+            if mode == "auto":
+                vx0, vy0, vx1, vy1 = visible_box(page)
+                x0, y0 = max(vx0, x0 - margin), max(vy0, y0 - margin)
+                x1, y1 = min(vx1, x1 + margin), min(vy1, y1 + margin)
+            if x1 - x0 < CROP_MIN_PT or y1 - y0 < CROP_MIN_PT:
+                continue
+            page.obj.CropBox = Array([x0, y0, x1, y1])
+            for key in ("/TrimBox", "/ArtBox", "/BleedBox"):
+                if key in page.obj:
+                    del page.obj[key]
+            cropped += 1
+        if cropped == 0:
+            raise EngineError(ErrorCode.INVALID_INPUT, "Nothing to crop on the selected pages")
+        save_pdf(pdf, tmp, ctx, start=80, keep_encryption=True)
+    final = deliver_pdf(tmp, params, source, "cropped", protected=[source])
+    return ToolResult([final], {"pages": total, "cropped": cropped, "mode": mode})

@@ -360,7 +360,7 @@ function imageRatio(url: string): Promise<number> {
 
 // ── page strip ────────────────────────────────────────────────────────────────────────────
 
-function PageStrip({
+export function PageStrip({
   source,
   page,
   objects,

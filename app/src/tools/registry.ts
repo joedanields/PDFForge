@@ -81,7 +81,7 @@ export interface ToolDef {
   requiresIntelligence?: boolean;
   /** "files": file cards (default). "pages": one PDF shown as a selectable page grid.
    * "organize": page board built from one or more PDFs. */
-  layout?: "files" | "pages" | "organize" | "editor" | "sign";
+  layout?: "files" | "pages" | "organize" | "editor" | "sign" | "crop";
   /** pages layout: the page-range option that mirrors the grid selection. */
   pageSelection?: {
     option: string;
@@ -714,6 +714,32 @@ export const editPdfOptions = z.object({
     false,
     "Saves them as annotations other PDF editors can move or delete. Off: they become part of the page.",
   ),
+});
+
+export const cropOptions = z.object({
+  mode: opt.choice(
+    "Crop",
+    [
+      { value: "box", label: "Area I draw" },
+      { value: "auto", label: "Trim white margins" },
+    ],
+    "box",
+    "Cropping hides the rest of the page; nothing is deleted, so it can be undone later.",
+    { segmented: true },
+  ),
+  apply: opt.choice(
+    "Apply to",
+    [
+      { value: "current", label: "This page" },
+      { value: "all", label: "All pages" },
+    ],
+    "all",
+    undefined,
+    { segmented: true },
+  ),
+  margin: opt.int("Keep a margin of (pt)", 0, 72, 6, undefined, {
+    showWhen: { key: "mode", values: ["auto"] },
+  }),
 });
 
 export const echoOptions = z.object({
@@ -1405,18 +1431,27 @@ export const TOOLS: readonly ToolDef[] = [
           }`
         : null,
   },
-  soon({
+  {
     id: "crop",
     ref: "E4",
     name: "Crop PDF",
-    description: "Trim margins or crop pages to a selected area.",
+    description: "Cut pages down to the area you draw, or trim white margins automatically.",
     category: "edit",
     icon: Crop,
     accepts: onePdf,
+    optionsSchema: cropOptions,
+    status: "available",
     priority: "should",
     phase: 3,
-    keywords: ["trim", "margins"],
-  }),
+    engineMethod: "crop",
+    actionLabel: "Crop PDF",
+    keywords: ["trim", "margins", "cut", "crop box"],
+    layout: "crop",
+    summary: (s) =>
+      typeof s.cropped === "number"
+        ? `Cropped ${s.cropped} of ${String(s.pages)} ${s.pages === 1 ? "page" : "pages"}`
+        : null,
+  },
   soon({
     id: "fill-forms",
     ref: "E5",

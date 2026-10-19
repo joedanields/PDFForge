@@ -52,6 +52,7 @@ const IMPLEMENTED = [
   "ocr",
   "edit-pdf",
   "sign",
+  "crop",
 ];
 
 describe("tool registry contents", () => {
