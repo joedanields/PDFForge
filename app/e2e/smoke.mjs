@@ -7,7 +7,8 @@
 //
 // File-based sections need a dev build (file-injection seam). --echo-only runs just the engine
 // self-test, which also works against the built .exe.
-import { mkdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
 
@@ -985,6 +986,28 @@ if (section("forms")) {
   const text = await runAndWait("Save filled form");
   expect(text.includes("5 fields filled · flattened"), "5 fields filled and flattened");
   expect(/application_filled( \(\d+\))?\.pdf/.test(text), "output application_filled.pdf");
+}
+
+if (section("explorer")) {
+  console.log("Explorer menu: Merge with PDFForge");
+  // What Explorer runs, once per selected file; the single-instance plugin forwards each
+  // launch to this app. (The registry entries themselves are covered by Rust tests.)
+  const exe = join(import.meta.dirname, "..", "src-tauri", "target", "debug", "pdfforge.exe");
+  expect(existsSync(exe), "dev build exe found");
+  await go("#/");
+  for (const name of ["Chapter 1.pdf", "Chapter 2.pdf"]) {
+    execFileSync(exe, ["--merge", join(inputDir, name)], { timeout: 30_000 });
+  }
+  await page.waitForFunction(() => location.hash.startsWith("#/tool/merge"), null, {
+    timeout: 15_000,
+  });
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 2, null, {
+    timeout: 30_000,
+  });
+  ok("both files arrived in Merge PDF");
+  await go("#/settings");
+  await page.getByLabel("Show PDFForge in Explorer's right-click menu").waitFor();
+  ok("Windows integration setting shown");
 }
 
 if (section("batch")) {

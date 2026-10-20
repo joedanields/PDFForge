@@ -1,6 +1,7 @@
 import { FlaskConical, FolderOpen, ScrollText } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { ContextMenuSetting } from "@/components/ContextMenuSetting";
 import { OcrLanguagesSettings } from "@/components/OcrLanguagesSettings";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,10 @@ export function SettingsPage() {
 
       <Section title={t("settings.ocrLanguages")}>
         <OcrLanguagesSettings />
+      </Section>
+
+      <Section title={t("settings.windows")}>
+        <ContextMenuSetting />
       </Section>
 
       <Section title={t("settings.privacy")}>

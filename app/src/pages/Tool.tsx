@@ -240,6 +240,13 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     return () => window.removeEventListener("pdfforge:test-add-files", onTestFiles);
   }, [addPaths]);
 
+  // Files from outside the app (Explorer "Merge with PDFForge"), arriving one launch at a time.
+  const incoming = useAppStore((s) => s.incoming[tool.id]?.length ?? 0);
+  useEffect(() => {
+    if (incoming === 0 || !editing) return;
+    void addPaths(useAppStore.getState().takeIncoming(tool.id));
+  }, [addPaths, editing, incoming, tool.id]);
+
   // Files handed over by another tool (e.g. Merge result → "Protect this file").
   const location = useLocation();
   const navigate = useNavigate();

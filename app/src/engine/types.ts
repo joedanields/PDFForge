@@ -86,6 +86,15 @@ export interface SavedSignature {
   png: string;
 }
 
+/** "Open with PDFForge" / Explorer "Merge with PDFForge" (src-tauri/src/launch.rs). */
+export interface OpenRequest {
+  action: "view" | "merge";
+  files: string[];
+}
+
+/** Explorer right-click entries (src-tauri/src/contextmenu.rs). */
+export type ContextMenuState = "off" | "on" | "elsewhere";
+
 export interface AppInfo {
   version: string;
   dataDir: string;
@@ -98,7 +107,7 @@ export const ERROR_TEXT: Record<ErrorCode, { title: string; fix?: string }> = {
   WRONG_PASSWORD: { title: "The password is incorrect", fix: "Try the password again." },
   CORRUPT_FILE: {
     title: "This file is damaged",
-    fix: "Try Repair PDF (coming soon) or use another copy.",
+    fix: "Try Repair PDF or use another copy.",
   },
   UNSUPPORTED: { title: "This isn't supported yet" },
   DISK_FULL: { title: "Not enough disk space", fix: "Free up space or choose another folder." },

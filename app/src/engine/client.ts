@@ -6,12 +6,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AppInfo,
+  ContextMenuState,
   DoneEvent,
   EngineEvent,
   EngineStatus,
   ErrorEvent,
   FileStat,
   OcrLanguage,
+  OpenRequest,
   ProgressEvent,
   RecentOutput,
   SavedSignature,
@@ -116,7 +118,9 @@ export const api = {
     invoke<SavedSignature>("save_signature", { kind, png }),
   deleteSignature: (id: string) => invoke<undefined>("delete_signature", { id }),
   clearSignatures: () => invoke<undefined>("clear_signatures"),
-  takeOpenRequests: () => invoke<string[]>("take_open_requests"),
+  takeOpenRequests: () => invoke<OpenRequest[]>("take_open_requests"),
+  contextMenuState: () => invoke<ContextMenuState>("context_menu_state"),
+  setContextMenu: (enabled: boolean) => invoke<ContextMenuState>("set_context_menu", { enabled }),
   listWorkflows: () => invoke<Workflow[]>("list_workflows"),
   saveWorkflow: (workflow: Workflow) => invoke<Workflow>("save_workflow", { workflow }),
   deleteWorkflow: (id: string) => invoke<undefined>("delete_workflow", { id }),
@@ -131,10 +135,10 @@ export function onEngineStatus(cb: (status: EngineStatus) => void): Promise<Unli
   });
 }
 
-/** PDFs passed to a second launch ("Open with PDFForge" while the app is running). */
-export function onOpenFiles(cb: (files: string[]) => void): Promise<UnlistenFn> {
-  return listen<string[]>(EVENTS.openFiles, ({ payload }) => {
-    cb(payload);
+/** A later launch queued an open request ("Open with" / "Merge with PDFForge"): take it. */
+export function onOpenFiles(cb: () => void): Promise<UnlistenFn> {
+  return listen(EVENTS.openFiles, () => {
+    cb();
   });
 }
 

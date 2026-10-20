@@ -113,6 +113,12 @@ export const en = {
   "settings.selfTest": "Run engine self-test",
   "settings.notices": "Third-party licences",
   "settings.licensesFolder": "Licences and source code",
+  "settings.windows": "Windows integration",
+  "settings.contextMenu": "Show PDFForge in Explorer's right-click menu",
+  "settings.contextMenuHelp":
+    "Adds “Open with PDFForge” and “Merge with PDFForge” for PDF files (on Windows 11 under “Show more options”). Only for your account; no administrator rights needed.",
+  "settings.contextMenuElsewhere":
+    "The menu points to another copy of PDFForge. Turn it off and on again to use this one.",
   "settings.licenceNote":
     "PDFForge is built from open-source components. It contains no AGPL software, and all processing runs on this computer.",
   "settings.dataDir": "Data folder",

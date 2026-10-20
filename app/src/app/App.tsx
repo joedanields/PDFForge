@@ -3,7 +3,7 @@ import { HashRouter, Outlet, Route, Routes, useNavigate } from "react-router-dom
 import { CommandSearch } from "@/components/CommandSearch";
 import { TopBar } from "@/components/TopBar";
 import { api, isTauri, onOpenFiles } from "@/engine/client";
-import { initAppStore } from "@/lib/store";
+import { initAppStore, useAppStore } from "@/lib/store";
 import { Home } from "@/pages/Home";
 import { SettingsPage } from "@/pages/Settings";
 import { ToolPage } from "@/pages/Tool";
@@ -30,14 +30,23 @@ function Layout() {
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
 
-  // "Open with PDFForge": files the app was started with, and files from later launches.
+  // "Open with PDFForge" / Explorer "Merge with PDFForge": the request the app was started
+  // with, and those of later launches (Explorer starts one launch per selected file).
   useEffect(() => {
     if (!isTauri()) return;
-    const open = (files: string[]) => {
-      if (files[0]) navigate(viewerPath(files[0]));
-    };
-    void api.takeOpenRequests().then(open);
-    const unlisten = onOpenFiles(open);
+    const take = () =>
+      void api.takeOpenRequests().then((requests) => {
+        const merge = requests.filter((r) => r.action === "merge").flatMap((r) => r.files);
+        const view = requests.filter((r) => r.action === "view").flatMap((r) => r.files);
+        if (merge.length > 0) {
+          useAppStore.getState().queueIncoming("merge", merge);
+          navigate("/tool/merge");
+        } else if (view.at(-1)) {
+          navigate(viewerPath(view.at(-1) ?? ""));
+        }
+      });
+    take();
+    const unlisten = onOpenFiles(take);
     return () => {
       void unlisten.then((fn) => fn());
     };

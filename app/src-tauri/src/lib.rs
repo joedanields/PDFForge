@@ -1,4 +1,5 @@
 mod commands;
+pub mod contextmenu;
 pub mod db;
 pub mod engine;
 pub mod launch;
@@ -132,9 +133,9 @@ pub fn run() {
                 let _ = window.unminimize();
                 let _ = window.set_focus();
             }
-            let files = launch::pdf_args(argv);
-            if !files.is_empty() {
-                let _ = app.emit(launch::OPEN_EVENT, files);
+            if let Some(request) = launch::open_request(argv) {
+                app.state::<launch::PendingOpen>().push(request);
+                let _ = app.emit(launch::OPEN_EVENT, ());
             }
         }))
         .plugin(log_plugin())
@@ -145,7 +146,7 @@ pub fn run() {
             let db = Arc::new(Db::open(&data.join("app.db"))?);
             app.manage(SettingsStore::load(data.join("settings.json")));
             app.manage(db.clone());
-            app.manage(launch::PendingOpen::new(launch::pdf_args(std::env::args())));
+            app.manage(launch::PendingOpen::new(launch::open_request(std::env::args())));
 
             let handle = app.handle().clone();
             let sink = Arc::new(AppSink {
@@ -175,6 +176,8 @@ pub fn run() {
             commands::file_stats,
             commands::list_folder,
             launch::take_open_requests,
+            contextmenu::context_menu_state,
+            contextmenu::set_context_menu,
             ocr::ocr_languages,
             signatures::list_signatures,
             signatures::save_signature,
