@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { t } from "@/i18n";
+import { t, tx } from "@/i18n";
 import { loadViewer, openDocument } from "@/lib/pdfjs";
 import { fileName } from "@/lib/utils";
 import { chooseAndView } from "@/lib/viewer";
@@ -321,7 +321,7 @@ function DocumentView({ doc, path }: { doc: PDFDocumentProxy; path: string }) {
             {zoomLabel === "custom" && <option value="custom">{scalePercent}%</option>}
             {ZOOMS.map((z) => (
               <option key={z.value} value={z.value}>
-                {z.label}
+                {tx(z.label)}
               </option>
             ))}
           </select>
@@ -409,7 +409,7 @@ function DocumentView({ doc, path }: { doc: PDFDocumentProxy; path: string }) {
                     className="w-full px-3 py-1.5 text-left text-sm hover:bg-surface-2"
                     onClick={() => navigate(`/tool/${tool.id}`, { state: { preload: [path] } })}
                   >
-                    {tool.name}
+                    {tx(tool.name)}
                   </button>
                 </li>
               ))}

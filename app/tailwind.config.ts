@@ -9,7 +9,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Inter Variable"', "Segoe UI", "system-ui", "sans-serif"],
+        sans: ['"Inter Variable"', "Segoe UI", "Nirmala UI", "system-ui", "sans-serif"],
       },
       fontSize: {
         xs: ["12px", "16px"],

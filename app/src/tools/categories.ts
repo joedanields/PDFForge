@@ -9,6 +9,7 @@ export const TOOL_CATEGORIES = [
 export type ToolCategory = (typeof TOOL_CATEGORIES)[number];
 
 /** Home filter chips (docs/04_UI_UX.md §2.1). "workflows" is a chip, not a tool category. */
+import { tx } from "@/i18n";
 export type CategoryFilter = "all" | "workflows" | ToolCategory;
 
 export interface CategoryMeta {
@@ -44,7 +45,7 @@ export function filterChips(intelligenceEnabled: boolean): CategoryFilter[] {
 }
 
 export function chipLabel(chip: CategoryFilter): string {
-  if (chip === "all") return "All";
-  if (chip === "workflows") return "Workflows";
-  return CATEGORY_META[chip].label;
+  if (chip === "all") return tx("All");
+  if (chip === "workflows") return tx("Workflows");
+  return tx(CATEGORY_META[chip].label);
 }

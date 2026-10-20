@@ -5,6 +5,7 @@
 import { JobError, type RunningJob } from "@/engine/client";
 import type { DoneEvent } from "@/engine/types";
 import { ERROR_TEXT } from "@/engine/types";
+import { tx } from "@/i18n";
 
 /** Most files one batch takes. */
 export const BATCH_MAX = 500;
@@ -64,8 +65,8 @@ export function commonFolder(items: readonly BatchItem[]): string | null {
 export function errorText(err: unknown): string {
   if (err instanceof JobError) {
     const { code, message } = err.event;
-    if (code === "CANCELLED") return ERROR_TEXT.CANCELLED.title;
-    return message || ERROR_TEXT[code].title;
+    if (code === "CANCELLED") return tx(ERROR_TEXT.CANCELLED.title);
+    return message || tx(ERROR_TEXT[code].title);
   }
   return String(err);
 }

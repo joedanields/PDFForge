@@ -3,6 +3,7 @@ import { HashRouter, Outlet, Route, Routes, useNavigate } from "react-router-dom
 import { CommandSearch } from "@/components/CommandSearch";
 import { TopBar } from "@/components/TopBar";
 import { api, isTauri, onOpenFiles } from "@/engine/client";
+import { setLocale } from "@/i18n";
 import { initAppStore, useAppStore } from "@/lib/store";
 import { Home } from "@/pages/Home";
 import { SettingsPage } from "@/pages/Settings";
@@ -64,6 +65,10 @@ function Layout() {
 }
 
 export function App() {
+  // Changing the language re-renders every page in it (docs/02 §J).
+  const language = useAppStore((s) => s.settings.language);
+  setLocale(language);
+
   useEffect(() => {
     initAppStore().catch((err: unknown) => {
       console.error("Failed to initialise app state", err);
@@ -71,7 +76,7 @@ export function App() {
   }, []);
 
   return (
-    <HashRouter>
+    <HashRouter key={language}>
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Home />} />

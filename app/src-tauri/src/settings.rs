@@ -15,10 +15,21 @@ pub enum Theme {
     Dark,
 }
 
+/// UI language (docs/02 §J: English first; Tamil, Hindi).
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    #[default]
+    En,
+    Ta,
+    Hi,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub theme: Theme,
+    pub language: Language,
     /// `None` = save next to the first input file (docs/02 common rules).
     pub default_output_dir: Option<String>,
 }
@@ -108,6 +119,7 @@ mod tests {
             .set(Settings {
                 theme: Theme::Dark,
                 default_output_dir: Some(out_dir.clone()),
+                ..Settings::default()
             })
             .unwrap();
         let text = fs::read_to_string(&path).unwrap();
@@ -133,6 +145,17 @@ mod tests {
         let s = SettingsStore::load(path).get();
         assert_eq!(s.theme, Theme::Light);
         assert_eq!(s.default_output_dir, None);
+    }
+
+    #[test]
+    fn language_round_trips_and_defaults_to_english() {
+        let parsed: Settings = serde_json::from_str(r#"{"language":"ta"}"#).unwrap();
+        assert_eq!(parsed.language, Language::Ta);
+        assert_eq!(Settings::default().language, Language::En);
+        assert!(serde_json::to_string(&parsed)
+            .unwrap()
+            .contains(r#""language":"ta""#));
+        assert!(serde_json::from_str::<Settings>(r#"{"language":"xx"}"#).is_err());
     }
 
     #[test]

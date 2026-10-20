@@ -1105,6 +1105,34 @@ if (section("workflows")) {
   ok("workflow listed and deleted");
 }
 
+if (section("language")) {
+  console.log("Language: Tamil and Hindi");
+  const pick = async (label, name) => {
+    await go("#/settings");
+    await page.getByLabel(label, { exact: true }).click();
+    await page.getByRole("option", { name, exact: true }).click();
+  };
+  await pick("Language", "தமிழ்");
+  await page.getByRole("heading", { name: "அமைப்புகள்", exact: true }).waitFor();
+  await go("#/");
+  await page.getByText("PDF இணை", { exact: true }).first().waitFor();
+  expect((await page.locator("html").getAttribute("lang")) === "ta", "html lang=ta");
+  await shot("home-tamil");
+  await go("#/tool/compress");
+  await page.getByText("சுருக்கம்", { exact: true }).first().waitFor();
+  ok("tool page and options in Tamil");
+  await shot("compress-tamil");
+  await pick("மொழி", "हिन्दी");
+  await page.getByRole("heading", { name: "सेटिंग्स", exact: true }).waitFor();
+  await go("#/");
+  await page.getByText("PDF जोड़ें", { exact: true }).first().waitFor();
+  await shot("home-hindi");
+  ok("Hindi");
+  await pick("भाषा", "English");
+  await page.getByRole("heading", { name: "Settings", exact: true }).waitFor();
+  ok("back to English");
+}
+
 if (section("settings")) {
   console.log("Settings");
   await go("#/settings");

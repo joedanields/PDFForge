@@ -101,6 +101,8 @@ export const en = {
   "settings.themeSystem": "Match Windows",
   "settings.themeLight": "Light",
   "settings.themeDark": "Dark",
+  "settings.language": "Language",
+  "settings.languageHelp": "Messages from the PDF engine and some result details stay in English.",
   "settings.outputDir": "Default output folder",
   "settings.outputDirHelp":
     "Where new files are saved. By default, next to the first file you add.",

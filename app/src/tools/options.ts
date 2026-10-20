@@ -3,6 +3,7 @@
  * Tool page can generate its options form straight from a tool's `optionsSchema`.
  */
 import { z } from "zod";
+import { tx } from "@/i18n";
 import { parseRanges } from "@/lib/pageRanges";
 
 export interface Choice {
@@ -233,5 +234,5 @@ export function confirmError(
   const original = values[of];
   const confirm = values[field.key];
   if (typeof original !== "string" || original === "") return null;
-  return confirm === original ? null : "The passwords don't match";
+  return confirm === original ? null : tx("The passwords don't match");
 }

@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { api, isTauri } from "@/engine/client";
-import { t } from "@/i18n";
+import { t, tx } from "@/i18n";
 import { newStep, newWorkflowId, type Workflow } from "@/lib/workflows";
 import { getTool } from "@/tools/registry";
 
@@ -98,7 +98,7 @@ export function WorkflowList() {
                   {w.steps.map((s, i) => (
                     <span key={i} className="inline-flex items-center gap-1">
                       {i > 0 && <ChevronRight className="size-3.5" aria-hidden />}
-                      {getTool(s.tool)?.name ?? s.tool}
+                      {tx(getTool(s.tool)?.name ?? s.tool)}
                     </span>
                   ))}
                 </p>

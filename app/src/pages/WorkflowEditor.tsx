@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, isTauri } from "@/engine/client";
-import { t } from "@/i18n";
+import { t, tx } from "@/i18n";
 import { moveItem } from "@/lib/files";
 import { cn } from "@/lib/utils";
 import {
@@ -207,7 +207,7 @@ export function WorkflowEditorPage() {
           <SelectContent>
             {available.map((tool) => (
               <SelectItem key={tool.id} value={tool.id}>
-                {tool.name}
+                {tx(tool.name)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -282,7 +282,7 @@ function StepCard({
         isDragging && "z-10 shadow-xl",
         problem && "border-danger",
       )}
-      aria-label={`${t("workflows.step", { n: index + 1 })}: ${tool.name}`}
+      aria-label={`${t("workflows.step", { n: index + 1 })}: ${tx(tool.name)}`}
     >
       <div className="flex items-center gap-3 p-3">
         <button
@@ -310,7 +310,7 @@ function StepCard({
           aria-expanded={open}
           disabled={!hasOptions}
         >
-          <span className="block truncate font-medium">{tool.name}</span>
+          <span className="block truncate font-medium">{tx(tool.name)}</span>
           {problem ? (
             <span className="flex items-center gap-1 text-xs text-danger">
               <CircleAlert className="size-3.5" aria-hidden />
@@ -346,7 +346,7 @@ function StepCard({
           variant="ghost"
           size="sm"
           onClick={onRemove}
-          aria-label={t("workflows.removeStep", { name: tool.name })}
+          aria-label={t("workflows.removeStep", { name: tx(tool.name) })}
         >
           <X aria-hidden />
         </Button>

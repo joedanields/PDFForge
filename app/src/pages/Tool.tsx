@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { JobError, api, isTauri, runJob, type RunningJob } from "@/engine/client";
 import { ERROR_TEXT, type DoneEvent, type ErrorEvent } from "@/engine/types";
 import { BATCH_MAX, type BatchHandle, type BatchItem, runBatch } from "@/lib/batch";
-import { t } from "@/i18n";
+import { t, tx } from "@/i18n";
 import {
   type CropBox,
   DEFAULT_CROP_BOX,
@@ -59,10 +59,10 @@ export function ToolPage() {
   }
   if (tool.status !== "available" || !tool.engineMethod) {
     return (
-      <PageShell tool={tool} title={tool.name}>
+      <PageShell tool={tool} title={tx(tool.name)}>
         <div className="mx-auto max-w-lg rounded-card border border-dashed p-10 text-center">
           <h2 className="text-lg font-semibold">
-            {t("tool.comingSoonTitle", { name: tool.name })}
+            {t("tool.comingSoonTitle", { name: tx(tool.name) })}
           </h2>
           <p className="mt-2 text-text-muted">{t("tool.comingSoonBody", { phase: tool.phase })}</p>
         </div>
@@ -266,7 +266,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     if (!isTauri()) return;
     const picked = await open({
       multiple: true,
-      filters: [{ name: tool.accepts.label, extensions: [...tool.accepts.extensions] }],
+      filters: [{ name: tx(tool.accepts.label), extensions: [...tool.accepts.extensions] }],
     });
     if (Array.isArray(picked)) await addPaths(picked);
     else if (typeof picked === "string") await addPaths([picked]);
@@ -349,7 +349,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
         error = confirmError(field, options);
       }
       if (error) {
-        blocker = `${field.meta.label}: ${error}`;
+        blocker = `${tx(field.meta.label)}: ${error}`;
         break;
       }
     }
@@ -360,7 +360,8 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
         typeof selText === "string" && selText.trim() && pageCount
           ? (parsePageSet(selText, pageCount)?.size ?? 0)
           : 0;
-      blocker = tool.check(parsed.data, { pageCount, selectedCount });
+      const problem = tool.check(parsed.data, { pageCount, selectedCount });
+      blocker = problem && tx(problem);
     }
   }
   const certificateOnly = signTool && options.digital === true;
@@ -409,7 +410,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     const text = ERROR_TEXT[event.code];
     setNotice({
       tone: "danger",
-      text: [text.title, event.message, text.fix].filter(Boolean).join(". "),
+      text: [tx(text.title), event.message, text.fix && tx(text.fix)].filter(Boolean).join(". "),
       details: `${event.code}: ${event.message}`,
     });
   };
@@ -581,9 +582,9 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
 
   if (batchItems) {
     return (
-      <PageShell tool={tool} title={tool.name}>
+      <PageShell tool={tool} title={tx(tool.name)}>
         <BatchView
-          title={t("batch.running", { tool: tool.name })}
+          title={t("batch.running", { tool: tx(tool.name) })}
           items={batchItems}
           running={batchRunning}
           cancelling={batchCancelling}
@@ -598,7 +599,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
 
   if (phase.kind === "done") {
     return (
-      <PageShell tool={tool} title={tool.name}>
+      <PageShell tool={tool} title={tx(tool.name)}>
         {tool.layout === "compare" && (
           <CompareView
             files={files}
@@ -620,7 +621,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   }
 
   return (
-    <PageShell tool={tool} title={tool.name}>
+    <PageShell tool={tool} title={tx(tool.name)}>
       <div className="relative grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-4">
           {notice && (
@@ -655,7 +656,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
             <DropZone
               over={over}
               acceptedLabel={
-                batchMode ? t("batch.accepted", { count: BATCH_MAX }) : tool.accepts.label
+                batchMode ? t("batch.accepted", { count: BATCH_MAX }) : tx(tool.accepts.label)
               }
               onSelect={() => void selectFiles()}
             />
@@ -763,7 +764,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
                     <DropZone
                       compact
                       over={over}
-                      acceptedLabel={tool.accepts.label}
+                      acceptedLabel={tx(tool.accepts.label)}
                       onSelect={() => void selectFiles()}
                     />
                   )}
@@ -771,7 +772,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
             )}
           {!needsFiles && (
             <div className="rounded-card border bg-surface-2/50 p-8 text-text-muted">
-              {tool.description}
+              {tx(tool.description)}
             </div>
           )}
         </div>
@@ -815,7 +816,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
           <div className="space-y-2">
             {blocker && <p className="text-xs text-text-muted">{blocker}</p>}
             <Button size="lg" className="w-full" disabled={!canRun} onClick={() => void run()}>
-              {tool.actionLabel}
+              {tx(tool.actionLabel)}
             </Button>
             <p className="text-center text-xs text-text-muted">{t("tool.shortcutRun")}</p>
           </div>
@@ -823,7 +824,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
 
         {phase.kind === "running" && (
           <ProgressOverlay
-            toolName={tool.name}
+            toolName={tx(tool.name)}
             percent={phase.percent}
             message={phase.message}
             startedAt={phase.startedAt}

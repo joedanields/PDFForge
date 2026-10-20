@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { api, isTauri } from "@/engine/client";
-import { t } from "@/i18n";
+import { t, tx } from "@/i18n";
 import { DEFAULT_STYLE, type EditObject } from "@/lib/editor";
 import type { InputFile } from "@/lib/files";
 import {
@@ -215,7 +215,7 @@ function CreateSignatureDialog({
     if (!isTauri()) return;
     const picked = await openDialog({
       multiple: false,
-      filters: [{ name: "Pictures", extensions: ["png", "jpg", "jpeg", "webp", "bmp", "gif"] }],
+      filters: [{ name: tx("Pictures"), extensions: ["png", "jpg", "jpeg", "webp", "bmp", "gif"] }],
     });
     if (typeof picked === "string") setUploaded(await uploadedSignature(picked));
   };

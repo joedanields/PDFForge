@@ -3,6 +3,7 @@
  * Saved workflows never contain passwords; those are asked for each time a workflow runs.
  */
 import type { z } from "zod";
+import { tx } from "@/i18n";
 import { describeOptions, defaultOptions, splitSecrets } from "@/tools/options";
 import { getTool, type AcceptSpec, type ToolDef } from "@/tools/registry";
 import { BATCH_MAX } from "./batch";
@@ -102,13 +103,16 @@ export function chainProblems(steps: readonly WorkflowStep[]): Map<number, strin
     const kind = STEP_KINDS[step.tool];
     const tool = getTool(step.tool);
     if (!kind || !tool) {
-      problems.set(index, "This tool can't be used in a workflow.");
+      problems.set(index, tx("This tool can't be used in a workflow."));
       return;
     }
     if (index > 0 && kind.accepts !== "pdf") {
-      problems.set(index, `${tool.name} can only be the first step.`);
+      problems.set(index, tx("{name} can only be the first step.", { name: tx(tool.name) }));
     } else if (index < steps.length - 1 && kind.produces !== "pdf") {
-      problems.set(index, `${tool.name} makes no PDF, so it can only be the last step.`);
+      problems.set(
+        index,
+        tx("{name} makes no PDF, so it can only be the last step.", { name: tx(tool.name) }),
+      );
     }
   });
   return problems;
@@ -154,5 +158,5 @@ export function stepOptionsError(step: WorkflowStep): string | null {
     ...defaultOptions(tool.optionsSchema),
     ...step.options,
   });
-  return parsed.success ? null : "Some options are not valid.";
+  return parsed.success ? null : tx("Some options are not valid.");
 }

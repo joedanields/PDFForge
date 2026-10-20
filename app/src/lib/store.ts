@@ -19,7 +19,11 @@ interface AppStore {
   setEngine: (status: EngineStatus) => void;
 }
 
-export const DEFAULT_SETTINGS: Settings = { theme: "system", defaultOutputDir: null };
+export const DEFAULT_SETTINGS: Settings = {
+  theme: "system",
+  language: "en",
+  defaultOutputDir: null,
+};
 
 export const useAppStore = create<AppStore>((set, get) => ({
   settings: DEFAULT_SETTINGS,

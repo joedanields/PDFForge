@@ -9,6 +9,7 @@ import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { CATEGORY_META } from "@/tools/categories";
 import { searchTools, visibleTools } from "@/tools/registry";
+import { tx } from "@/i18n";
 
 interface Props {
   open: boolean;
@@ -78,8 +79,10 @@ function SearchBody({ onClose }: { onClose: () => void }) {
                 <Icon className="size-4" aria-hidden />
               </span>
               <span className="flex-1">
-                <span className="block font-medium">{tool.name}</span>
-                <span className="block truncate text-xs text-text-muted">{tool.description}</span>
+                <span className="block font-medium">{tx(tool.name)}</span>
+                <span className="block truncate text-xs text-text-muted">
+                  {tx(tool.description)}
+                </span>
               </span>
               {soon && <Badge variant="soon">{t("badge.comingSoon")}</Badge>}
             </Command.Item>

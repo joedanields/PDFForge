@@ -1,4 +1,5 @@
 /** Mirrors engine/protocol.py and the Rust command payloads. */
+import type { Locale } from "@/i18n";
 
 export const ERROR_CODES = [
   "INVALID_INPUT",
@@ -52,6 +53,8 @@ export type Theme = "system" | "light" | "dark";
 
 export interface Settings {
   theme: Theme;
+  /** UI language (src-tauri/src/settings.rs). */
+  language: Locale;
   defaultOutputDir: string | null;
 }
 

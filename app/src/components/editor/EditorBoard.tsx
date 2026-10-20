@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, isTauri } from "@/engine/client";
-import { t } from "@/i18n";
+import { t, tx } from "@/i18n";
 import {
   boxFrom,
   bounds,
@@ -218,7 +218,7 @@ export function EditorBoard({
     if (!isTauri()) return;
     const picked = await openDialog({
       multiple: false,
-      filters: [{ name: "Pictures", extensions: Object.keys(PREVIEW_TYPES) }],
+      filters: [{ name: tx("Pictures"), extensions: Object.keys(PREVIEW_TYPES) }],
     });
     if (typeof picked !== "string") {
       setTool("select");
@@ -249,9 +249,9 @@ export function EditorBoard({
             key={x.id}
             size="icon"
             variant={tool === x.id ? "primary" : "ghost"}
-            aria-label={x.label}
+            aria-label={tx(x.label)}
             aria-pressed={tool === x.id}
-            title={x.label}
+            title={tx(x.label)}
             disabled={disabled}
             onClick={() => pickTool(x.id)}
           >
@@ -815,7 +815,7 @@ function Selection({ obj, size }: { obj: EditObject; size: PageSize }) {
       {isBoxKind(obj.kind) && (
         <rect
           data-handle="resize"
-          aria-label="Resize"
+          aria-label={tx("Resize")}
           x={(b.x + b.w) * W - 4}
           y={(b.y + b.h) * H - 4}
           width={8}

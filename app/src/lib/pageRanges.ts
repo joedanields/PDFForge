@@ -2,6 +2,7 @@
  * Page-range syntax, identical to engine/utils/ranges.py so ranges are validated live
  * (docs/02 A2): "5", "1-3", "8-" (to the end), "-3" (first three), "all". 1-based.
  */
+import { tx } from "@/i18n";
 
 export interface PageRange {
   first: number;
@@ -22,7 +23,7 @@ export function parseRanges(text: string, pageCount: number): ParseResult {
     const part = raw.trim();
     if (!part) continue;
     const match = PART.exec(part);
-    if (!match) return { ok: false, error: `“${part}” is not a page or range` };
+    if (!match) return { ok: false, error: tx("“{part}” is not a page or range", { part }) };
     let first: number;
     let last: number;
     if (match[3]) {
@@ -31,19 +32,25 @@ export function parseRanges(text: string, pageCount: number): ParseResult {
       first = match[1] ? Number(match[1]) : 1;
       last = match[2] ? Number(match[2]) : pageCount;
     }
-    if (first < 1 || last < 1) return { ok: false, error: "Page numbers start at 1" };
+    if (first < 1 || last < 1) return { ok: false, error: tx("Page numbers start at 1") };
     if (first > last) {
-      return { ok: false, error: `“${part}” runs backwards; write it as ${last}-${first}` };
+      return {
+        ok: false,
+        error: tx("“{part}” runs backwards; write it as {last}-{first}", { part, last, first }),
+      };
     }
     if (last > pageCount) {
       return {
         ok: false,
-        error: `Page ${last} doesn't exist — this document has ${pageCount} pages`,
+        error: tx("Page {last} doesn't exist — this document has {count} pages", {
+          last,
+          count: pageCount,
+        }),
       };
     }
     ranges.push({ first, last });
   }
-  if (ranges.length === 0) return { ok: false, error: "No pages selected" };
+  if (ranges.length === 0) return { ok: false, error: tx("No pages selected") };
   return { ok: true, ranges };
 }
 

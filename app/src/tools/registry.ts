@@ -43,6 +43,7 @@ import { z } from "zod";
 import type { ToolCategory } from "./categories";
 import { parseRanges } from "@/lib/pageRanges";
 import { opt } from "./options";
+import { tx } from "@/i18n";
 
 export type ToolStatus = "available" | "coming-soon";
 export type Priority = "must" | "should" | "could" | "wont";
@@ -268,8 +269,10 @@ function splitBadge(
     .map((r, n) => (page >= r.first && page <= r.last ? n + 1 : 0))
     .filter((n) => n > 0);
   if (files.length === 0) return null;
-  if (options.merge_ranges === true) return "Included";
-  return files.length === 1 ? `File ${files[0]}` : `Files ${files.join(", ")}`;
+  if (options.merge_ranges === true) return tx("Included");
+  return files.length === 1
+    ? tx("File {n}", { n: files[0] ?? "" })
+    : tx("Files {list}", { list: files.join(", ") });
 }
 
 export const imageToPdfOptions = z.object({

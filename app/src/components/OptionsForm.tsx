@@ -5,6 +5,7 @@ import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isTauri } from "@/engine/client";
+import { tx } from "@/i18n";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -93,7 +94,7 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
   const helpId = field.meta.help ? `${id}-help` : undefined;
   const help = field.meta.help && (
     <p id={helpId} className="text-xs text-text-muted">
-      {field.meta.help}
+      {tx(field.meta.help)}
     </p>
   );
 
@@ -101,7 +102,7 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
     return (
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <Label htmlFor={id}>{field.meta.label}</Label>
+          <Label htmlFor={id}>{tx(field.meta.label)}</Label>
           {help}
         </div>
         <Switch
@@ -118,10 +119,10 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
   if (field.kind === "enum" && field.meta.grid) {
     return (
       <fieldset className="space-y-2" disabled={disabled}>
-        <legend className="mb-2 text-sm font-medium">{field.meta.label}</legend>
+        <legend className="mb-2 text-sm font-medium">{tx(field.meta.label)}</legend>
         <div
           role="radiogroup"
-          aria-label={field.meta.label}
+          aria-label={tx(field.meta.label)}
           className="grid w-36 grid-cols-3 gap-1 rounded-md border bg-surface-2/60 p-1"
         >
           {field.meta.choices?.map((c) => {
@@ -132,8 +133,8 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
                 type="button"
                 role="radio"
                 aria-checked={active}
-                aria-label={c.label}
-                title={c.label}
+                aria-label={tx(c.label)}
+                title={tx(c.label)}
                 onClick={() => onChange(c.value)}
                 className={cn(
                   "flex h-9 items-center justify-center rounded transition-colors",
@@ -160,7 +161,7 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
     return (
       <LanguagePicker
         id={id}
-        label={field.meta.label}
+        label={tx(field.meta.label)}
         value={value}
         onChange={onChange}
         disabled={disabled}
@@ -176,13 +177,13 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
       if (!isTauri()) return;
       const picked = await openDialog({
         multiple: false,
-        filters: [{ name: spec.name, extensions: [...spec.extensions] }],
+        filters: [{ name: tx(spec.name), extensions: [...spec.extensions] }],
       });
       if (typeof picked === "string") onChange(picked);
     };
     return (
       <div className="space-y-2">
-        <Label htmlFor={id}>{field.meta.label}</Label>
+        <Label htmlFor={id}>{tx(field.meta.label)}</Label>
         <div className="flex items-center gap-2 rounded-md border bg-surface-2/60 px-3 py-2">
           {spec.extensions.includes("png") ? (
             <ImageIcon className="size-4 shrink-0 text-text-muted" aria-hidden />
@@ -190,14 +191,14 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
             <File className="size-4 shrink-0 text-text-muted" aria-hidden />
           )}
           <span className="flex-1 truncate text-sm" title={path || undefined}>
-            {path ? fileName(path) : "No file chosen"}
+            {path ? fileName(path) : tx("No file chosen")}
           </span>
           {path && (
             <Button
               size="icon"
               variant="ghost"
               className="size-6"
-              aria-label={`Clear ${field.meta.label}`}
+              aria-label={tx("Clear {label}", { label: tx(field.meta.label) })}
               onClick={() => onChange("")}
               disabled={disabled}
             >
@@ -212,7 +213,7 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
           onClick={() => void choose()}
           disabled={disabled}
         >
-          Choose…
+          {tx("Choose…")}
         </Button>
         {help}
       </div>
@@ -223,7 +224,7 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
     const color = typeof value === "string" ? value : "#000000";
     return (
       <div className="flex items-center justify-between gap-4">
-        <Label htmlFor={id}>{field.meta.label}</Label>
+        <Label htmlFor={id}>{tx(field.meta.label)}</Label>
         <span className="flex items-center gap-2">
           <span className="font-mono text-xs text-text-muted">{color.toUpperCase()}</span>
           <input
@@ -242,8 +243,8 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
   if (field.kind === "enum" && field.meta.segmented) {
     return (
       <fieldset className="space-y-2" disabled={disabled}>
-        <legend className="mb-2 text-sm font-medium">{field.meta.label}</legend>
-        <div role="radiogroup" aria-label={field.meta.label} className="flex flex-wrap gap-1">
+        <legend className="mb-2 text-sm font-medium">{tx(field.meta.label)}</legend>
+        <div role="radiogroup" aria-label={tx(field.meta.label)} className="flex flex-wrap gap-1">
           {field.meta.choices?.map((c) => {
             const active = String(value) === c.value;
             return (
@@ -260,7 +261,7 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
                     : "bg-surface hover:bg-surface-2",
                 )}
               >
-                {c.label}
+                {tx(c.label)}
               </button>
             );
           })}
@@ -273,7 +274,7 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
   if (field.kind === "enum") {
     return (
       <div className="space-y-2">
-        <Label htmlFor={id}>{field.meta.label}</Label>
+        <Label htmlFor={id}>{tx(field.meta.label)}</Label>
         <Select value={String(value)} onValueChange={onChange} disabled={disabled}>
           <SelectTrigger id={id} aria-describedby={helpId}>
             <SelectValue />
@@ -281,7 +282,7 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
           <SelectContent>
             {field.meta.choices?.map((c) => (
               <SelectItem key={c.value} value={c.value}>
-                {c.label}
+                {tx(c.label)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -297,13 +298,14 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
     const errorId = `${id}-error`;
     return (
       <div className="space-y-2">
-        <Label htmlFor={id}>{field.meta.label}</Label>
+        <Label htmlFor={id}>{tx(field.meta.label)}</Label>
         <Input
           id={id}
           value={text}
           placeholder={
-            field.meta.placeholder ??
-            (field.meta.pages?.emptyMeansAll ? "All pages" : "e.g. 1-3, 5")
+            field.meta.placeholder
+              ? tx(field.meta.placeholder)
+              : tx(field.meta.pages?.emptyMeansAll ? "All pages" : "e.g. 1-3, 5")
           }
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
@@ -339,7 +341,7 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
   const isNumber = field.kind === "number";
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{field.meta.label}</Label>
+      <Label htmlFor={id}>{tx(field.meta.label)}</Label>
       <Input
         id={id}
         type={field.meta.secret ? "password" : isNumber ? "number" : "text"}
@@ -347,7 +349,7 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
         min={field.min}
         max={field.max}
         step={isNumber ? (field.integer ? 1 : "any") : undefined}
-        placeholder={field.meta.placeholder}
+        placeholder={field.meta.placeholder && tx(field.meta.placeholder)}
         value={typeof value === "number" || typeof value === "string" ? value : ""}
         onChange={(e) => {
           if (!isNumber) {
@@ -390,7 +392,7 @@ function PasswordField({
   const errorId = `${id}-error`;
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{field.meta.label}</Label>
+      <Label htmlFor={id}>{tx(field.meta.label)}</Label>
       <div className="relative">
         <Input
           id={id}
@@ -410,7 +412,9 @@ function PasswordField({
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? `Hide ${field.meta.label}` : `Show ${field.meta.label}`}
+          aria-label={tx(visible ? "Hide {label}" : "Show {label}", {
+            label: tx(field.meta.label),
+          })}
           className="absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded text-text-muted hover:text-text"
           disabled={disabled}
         >
@@ -435,7 +439,7 @@ function PasswordField({
             ))}
           </div>
           <p className="text-xs text-text-muted">
-            Strength: <span className="font-medium text-text">{strength.label}</span>
+            {tx("Strength")}: <span className="font-medium text-text">{tx(strength.label)}</span>
           </p>
         </div>
       )}

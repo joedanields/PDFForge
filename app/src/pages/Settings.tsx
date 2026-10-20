@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { api, isTauri } from "@/engine/client";
 import type { Theme } from "@/engine/types";
-import { t, type MessageKey } from "@/i18n";
+import { LOCALE_NAMES, LOCALES, t, type Locale, type MessageKey } from "@/i18n";
 import { useAppStore } from "@/lib/store";
 
 const THEMES: { value: Theme; label: MessageKey }[] = [
@@ -82,6 +82,22 @@ export function SettingsPage() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="language">{t("settings.language")}</Label>
+          <Select value={settings.language} onValueChange={(v) => save({ language: v as Locale })}>
+            <SelectTrigger id="language" className="max-w-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LOCALES.map((code) => (
+                <SelectItem key={code} value={code} lang={code}>
+                  {LOCALE_NAMES[code]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-text-muted">{t("settings.languageHelp")}</p>
         </div>
         <div className="space-y-1">
           <OutputFolderPicker

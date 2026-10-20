@@ -2,7 +2,7 @@ import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { t } from "@/i18n";
+import { t, tx } from "@/i18n";
 import { DEFAULT_STYLE, type EditObject, newId, REDACT_STYLE } from "@/lib/editor";
 import type { InputFile } from "@/lib/files";
 import { PdfSource } from "@/lib/pdfjs";
@@ -124,7 +124,7 @@ export function RedactBoard({ file, disabled = false, onChange }: Props) {
                   )
                 }
               />
-              {p.label}
+              {tx(p.label)}
             </label>
           ))}
         </fieldset>

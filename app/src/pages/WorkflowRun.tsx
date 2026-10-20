@@ -9,7 +9,7 @@ import { OptionsForm } from "@/components/OptionsForm";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
 import { Button } from "@/components/ui/button";
 import { api, isTauri, runJob } from "@/engine/client";
-import { t } from "@/i18n";
+import { t, tx } from "@/i18n";
 import { type BatchHandle, type BatchItem, runBatch } from "@/lib/batch";
 import { fileKey, sortByDate, sortByName, type InputFile } from "@/lib/files";
 import { useAppStore } from "@/lib/store";
@@ -161,7 +161,7 @@ function Runner({ workflow }: { workflow: Workflow }) {
     if (!isTauri() || !accepts) return;
     const picked = await open({
       multiple: true,
-      filters: [{ name: accepts.label, extensions: [...accepts.extensions] }],
+      filters: [{ name: tx(accepts.label), extensions: [...accepts.extensions] }],
     });
     if (Array.isArray(picked)) await addPaths(picked);
     else if (typeof picked === "string") await addPaths([picked]);
@@ -189,13 +189,13 @@ function Runner({ workflow }: { workflow: Workflow }) {
       for (const field of describeOptions(schema)) {
         if (!isVisible(field, values) || !field.meta.confirmOf) continue;
         const error = confirmError(field, values);
-        if (error) blocker = `${tool.name}: ${field.meta.label}: ${error}`;
+        if (error) blocker = `${tx(tool.name)}: ${tx(field.meta.label)}: ${error}`;
       }
       const full = { ...defaultOptions(tool.optionsSchema), ...workflow.steps[index]?.options };
       const parsed = tool.optionsSchema.safeParse({ ...full, ...values });
       const problem =
         parsed.success && tool.check?.(parsed.data, { pageCount: null, selectedCount: 0 });
-      if (problem) blocker = `${tool.name}: ${problem}`;
+      if (problem) blocker = `${tx(tool.name)}: ${tx(problem)}`;
     }
   }
 
@@ -301,7 +301,7 @@ function Runner({ workflow }: { workflow: Workflow }) {
         {workflow.steps.map((s, i) => (
           <span key={i} className="inline-flex items-center gap-1">
             {i > 0 && <ChevronRight className="size-3.5" aria-hidden />}
-            {getTool(s.tool)?.name ?? s.tool}
+            {tx(getTool(s.tool)?.name ?? s.tool)}
           </span>
         ))}
       </p>
@@ -344,7 +344,7 @@ function Runner({ workflow }: { workflow: Workflow }) {
           {files.length === 0 ? (
             <DropZone
               over={over}
-              acceptedLabel={accepts?.label ?? ""}
+              acceptedLabel={tx(accepts?.label ?? "")}
               onSelect={() => void selectFiles()}
             />
           ) : (
@@ -363,7 +363,7 @@ function Runner({ workflow }: { workflow: Workflow }) {
               <DropZone
                 compact
                 over={over}
-                acceptedLabel={accepts?.label ?? ""}
+                acceptedLabel={tx(accepts?.label ?? "")}
                 onSelect={() => void selectFiles()}
               />
             </>
@@ -381,7 +381,7 @@ function Runner({ workflow }: { workflow: Workflow }) {
           {secretSteps.map(({ index, tool, schema }) => (
             <div key={index} className="space-y-3">
               <h2 className="text-sm font-semibold">
-                {t("workflows.step", { n: index + 1 })}: {tool.name}
+                {t("workflows.step", { n: index + 1 })}: {tx(tool.name)}
               </h2>
               <OptionsForm
                 schema={schema}

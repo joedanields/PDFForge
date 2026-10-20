@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { t } from "@/i18n";
+import { t, tx } from "@/i18n";
 import { CATEGORY_META } from "@/tools/categories";
 import type { ToolDef } from "@/tools/registry";
 import { cn } from "@/lib/utils";
@@ -21,8 +21,8 @@ export function ToolCard({ tool }: { tool: ToolDef }) {
         </span>
         {!available && <Badge variant="soon">{t("badge.comingSoon")}</Badge>}
       </div>
-      <h3 className="mt-4 text-base font-semibold text-text">{tool.name}</h3>
-      <p className="mt-1 line-clamp-2 text-sm text-text-muted">{tool.description}</p>
+      <h3 className="mt-4 text-base font-semibold text-text">{tx(tool.name)}</h3>
+      <p className="mt-1 line-clamp-2 text-sm text-text-muted">{tx(tool.description)}</p>
     </>
   );
   const base = "block h-full rounded-card border bg-surface p-5 text-left";
