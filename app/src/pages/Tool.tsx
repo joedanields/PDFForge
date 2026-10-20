@@ -363,7 +363,14 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
       blocker = tool.check(parsed.data, { pageCount, selectedCount });
     }
   }
-  if (!blocker && editorTool && files.length > 0 && editorObjects.length === 0) {
+  const certificateOnly = signTool && options.digital === true;
+  if (
+    !blocker &&
+    editorTool &&
+    files.length > 0 &&
+    editorObjects.length === 0 &&
+    !certificateOnly
+  ) {
     blocker = t(signTool ? "sign.empty" : redactTool ? "redact.empty" : "editor.empty");
   }
   if (!blocker && formTool && files[0]?.status === "ready") {

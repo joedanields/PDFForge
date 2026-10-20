@@ -100,7 +100,8 @@ Last verified: 2026-10-19 — full gates green (443 pytest, 91 vitest, 26 Rust t
 | 4.1 Batch mode (H) | done | vitest batch (3), Rust list_folder (1), smoke `batch` | f96848e | one job per file, 2 at a time, per-file status, retry failed, add a folder; D-037 |
 | 4.2 Workflows builder (G) | done | test_workflow (9), vitest workflows (5), Rust workflows (3), smoke `workflows` | 69ab94c | builder with drag-reorder and inline options, run on files or a folder, example workflow; D-038 |
 | 4.3 Fill PDF Forms (E5) | done | test_fill_forms (9), vitest formFields (3), smoke `forms` | c132998 | text, multi-line, check box, radio, choice; only changed fields written; optional flatten; D-039 |
-| 4.4 Explorer context menu (per user, no admin) | done | Rust contextmenu (3) + launch (+1), smoke `explorer` | (this commit) | Open / Merge with PDFForge; installer adds, uninstaller removes, Settings toggle; D-040 |
+| 4.4 Explorer context menu (per user, no admin) | done | Rust contextmenu (3) + launch (+1), smoke `explorer` | 6fa60e0 | Open / Merge with PDFForge; installer adds, uninstaller removes, Settings toggle; D-040 |
+| 4.5 Digital certificate signing (F3, pyHanko) | done | test_cert_sign (7), smoke `certsign` | (this commit) | own PFX/P12, invisible signature after the visible items, offline; D-041 |
 
 ## Phase 3 — Editing & security
 

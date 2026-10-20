@@ -438,3 +438,55 @@ def make_full_form_pdf(path: Path) -> Path:
     c.showPage()
     c.save()
     return path
+
+
+def make_pkcs12(
+    path: Path, password: str, *, name: str = "Asha Raman", days: int = 365, expired: bool = False
+) -> Path:
+    """A self-signed signing certificate with its private key, as a PFX/P12 file."""
+    import datetime as dt
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.serialization import pkcs12
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, name)])
+    now = dt.datetime.now(dt.UTC)
+    start = now - dt.timedelta(days=days + 10) if expired else now - dt.timedelta(days=1)
+    end = now - dt.timedelta(days=1) if expired else now + dt.timedelta(days=days)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(subject)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(start)
+        .not_valid_after(end)
+        .add_extension(
+            x509.KeyUsage(
+                digital_signature=True,
+                content_commitment=True,
+                key_encipherment=False,
+                data_encipherment=False,
+                key_agreement=False,
+                key_cert_sign=False,
+                crl_sign=False,
+                encipher_only=False,
+                decipher_only=False,
+            ),
+            critical=True,
+        )
+        .sign(key, hashes.SHA256())
+    )
+    path.write_bytes(
+        pkcs12.serialize_key_and_certificates(
+            name.encode(),
+            key,
+            cert,
+            None,
+            serialization.BestAvailableEncryption(password.encode()),
+        )
+    )
+    return path

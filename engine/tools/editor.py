@@ -32,11 +32,19 @@ from reportlab.platypus import Paragraph
 
 from jobs import JobContext, ToolResult
 from protocol import EngineError, ErrorCode
+from utils.certsign import load_certificate, sign_pdf
 from utils.images import load_image
 from utils.pageinfo import apply, display_matrix, display_rect_to_page, displayed_size
 from utils.pdfio import deliver_pdf, open_pdf, save_pdf, single_pdf_input
 from utils.textlayout import FAMILIES, Counter
-from utils.validation import IMAGE_SUFFIXES, option_bool, options_dict, passwords_map
+from utils.validation import (
+    IMAGE_SUFFIXES,
+    option_bool,
+    option_str,
+    optional_str,
+    options_dict,
+    passwords_map,
+)
 
 MAX_OBJECTS = 2000
 MAX_POINTS = 5000
@@ -92,10 +100,12 @@ def _color(raw: dict[str, Any], key: str, default: str | None) -> str | None:
 
 
 def parse_objects(
-    raw: Any, page_count: int, images: dict[str, Path] | None = None
+    raw: Any, page_count: int, images: dict[str, Path] | None = None, *, allow_empty: bool = False
 ) -> list[EditObject]:
     """Validate the UI's objects. ``images`` resolves ``secret:<key>`` picture references
     (Sign: saved signatures arrive as job secrets, never as file paths or in history)."""
+    if allow_empty and raw in (None, []):
+        return []
     if not isinstance(raw, list) or not raw:
         raise _bad("Add something to a page first")
     if len(raw) > MAX_OBJECTS:
@@ -428,12 +438,53 @@ def edit_pdf(params: dict[str, Any], ctx: JobContext) -> ToolResult:
 
 
 def sign(params: dict[str, Any], ctx: JobContext) -> ToolResult:
-    """Sign PDF (F3): signatures, initials, dates and text, always part of the page."""
-    return _apply(params, ctx, tag="signed", keep_annotations=False)
+    """Sign PDF (F3): signatures, initials, dates and text, always part of the page; optionally
+    a digital signature with the user's PFX/P12 certificate (then the page items are optional).
+    """
+    options = options_dict(params)
+    cert_path = optional_str(options, "certificate")
+    if not cert_path:
+        return _apply(params, ctx, tag="signed", keep_annotations=False)
+    source = single_pdf_input(params)
+    signer, info = load_certificate(Path(cert_path), _secret_str(params, "certificate_password"))
+    ctx.progress(2, "Certificate ready")
+    visual = _apply(
+        params, ctx, tag="signed", keep_annotations=False, allow_empty=True, deliver=False
+    )
+    ctx.check_cancelled()
+    ctx.progress(92, "Adding the digital signature")
+    signed = ctx.temp_dir / "certified.pdf"
+    sign_pdf(
+        visual.outputs[0],
+        signed,
+        signer,
+        pdf_password=passwords_map(params).get(str(source), ""),
+        reason=option_str(options, "reason", "", max_len=200).strip(),
+        location=option_str(options, "location", "", max_len=200).strip(),
+    )
+    final = deliver_pdf(signed, params, source, "signed", protected=[source])
+    return ToolResult(
+        [final],
+        {**visual.stats, "digital_signature": True, "signer": info.signer, "expires": info.expires},
+    )
+
+
+def _secret_str(params: dict[str, Any], key: str) -> str:
+    bag = params.get("secrets", {})
+    value = bag.get(key, "") if isinstance(bag, dict) else ""
+    if not isinstance(value, str):
+        raise EngineError(ErrorCode.INVALID_INPUT, f"'{key}' must be text")
+    return value
 
 
 def _apply(
-    params: dict[str, Any], ctx: JobContext, *, tag: str, keep_annotations: bool
+    params: dict[str, Any],
+    ctx: JobContext,
+    *,
+    tag: str,
+    keep_annotations: bool,
+    allow_empty: bool = False,
+    deliver: bool = True,
 ) -> ToolResult:
     source = single_pdf_input(params)
     options = options_dict(params)
@@ -443,7 +494,9 @@ def _apply(
     work.mkdir()
     images = secret_images(params, ctx.temp_dir / "secret-images")
     with open_pdf(source, passwords_map(params)) as pdf:
-        objects = parse_objects(options.get("objects"), len(pdf.pages), images)
+        objects = parse_objects(
+            options.get("objects"), len(pdf.pages), images, allow_empty=allow_empty
+        )
         by_page: dict[int, list[EditObject]] = {}
         for obj in objects:
             by_page.setdefault(obj.page, []).append(obj)
@@ -471,7 +524,7 @@ def _apply(
         finally:
             for overlay in opened:
                 overlay.close()
-    final = deliver_pdf(tmp, params, source, tag, protected=[source])
+    final = deliver_pdf(tmp, params, source, tag, protected=[source]) if deliver else tmp
     stats: dict[str, Any] = {
         "objects": len(objects),
         "pages_edited": len(by_page),

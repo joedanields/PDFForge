@@ -22,6 +22,7 @@ from tests.fixtures import (
     make_heic,
     make_image,
     make_image_pdf,
+    make_pkcs12,
     make_pptx,
     make_scanned_text_pdf,
     make_text_pdf,
@@ -50,6 +51,7 @@ def main(out: Path) -> None:
     make_document_pdf(out / "annual.pdf", pages=2)
     make_scanned_text_pdf(out / "invoice-scan.pdf")
     make_full_form_pdf(out / "application.pdf")
+    make_pkcs12(out / "my-certificate.pfx", "Cert-Pass-1")  # test-only self-signed key
     (out / "notes.md").write_text(
         "# Meeting notes\n\n- **Budget** approved\n- Next review in *May*\n", encoding="utf-8"
     )

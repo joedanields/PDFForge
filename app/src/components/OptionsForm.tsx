@@ -1,6 +1,6 @@
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { Eye, EyeOff, ImageIcon, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Eye, EyeOff, File, ImageIcon, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,22 @@ interface Props {
 
 /** Options panel generated from a tool's zod schema (docs/03 §5). */
 export function OptionsForm({ schema, value, onChange, disabled = false, pageCount }: Props) {
+  // E2E seam (dev builds only): native file dialogs can't be automated over CDP.
+  const latest = useRef({ value, onChange });
+  useEffect(() => {
+    latest.current = { value, onChange };
+  });
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const onPick = (e: Event) => {
+      const { key, path } = (e as CustomEvent<{ key: string; path: string }>).detail;
+      if (!(key in schema.shape)) return;
+      latest.current.onChange({ ...latest.current.value, [key]: path });
+    };
+    window.addEventListener("pdfforge:test-pick-file", onPick);
+    return () => window.removeEventListener("pdfforge:test-pick-file", onPick);
+  }, [schema]);
+
   const fields = describeOptions(schema).filter((f) => isVisible(f, value));
   if (fields.length === 0) return null;
   const set = (key: string, v: unknown) => onChange({ ...value, [key]: v });
@@ -168,7 +184,11 @@ function Field({ field, value, onChange, disabled, pageCount, values }: FieldPro
       <div className="space-y-2">
         <Label htmlFor={id}>{field.meta.label}</Label>
         <div className="flex items-center gap-2 rounded-md border bg-surface-2/60 px-3 py-2">
-          <ImageIcon className="size-4 shrink-0 text-text-muted" aria-hidden />
+          {spec.extensions.includes("png") ? (
+            <ImageIcon className="size-4 shrink-0 text-text-muted" aria-hidden />
+          ) : (
+            <File className="size-4 shrink-0 text-text-muted" aria-hidden />
+          )}
           <span className="flex-1 truncate text-sm" title={path || undefined}>
             {path ? fileName(path) : "No file chosen"}
           </span>

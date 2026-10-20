@@ -775,6 +775,30 @@ export const redactOptions = z.object({
   ),
 });
 
+export const signOptions = z.object({
+  digital: opt.bool(
+    "Add a digital signature",
+    false,
+    "Signs with your own certificate file (PFX/P12) so anyone can check the document was not changed. The items on the page become optional.",
+  ),
+  certificate: opt.text("Certificate file", "", "A .pfx or .p12 file with your private key.", {
+    showWhen: { key: "digital", values: ["true"] },
+    file: { name: "Certificates", extensions: ["pfx", "p12"] },
+  }),
+  certificate_password: opt.password("Certificate password", undefined, {
+    showWhen: { key: "digital", values: ["true"] },
+    strength: false,
+  }),
+  reason: opt.text("Reason (optional)", "", undefined, {
+    showWhen: { key: "digital", values: ["true"] },
+    placeholder: "e.g. Approved",
+  }),
+  location: opt.text("Place (optional)", "", undefined, {
+    showWhen: { key: "digital", values: ["true"] },
+    placeholder: "e.g. Chennai",
+  }),
+});
+
 export const fillFormsOptions = z.object({
   flatten: opt.bool(
     "Flatten the form",
@@ -1595,18 +1619,34 @@ export const TOOLS: readonly ToolDef[] = [
     category: "security",
     icon: Signature,
     accepts: onePdf,
-    optionsSchema: NO_OPTIONS,
+    optionsSchema: signOptions,
     status: "available",
     priority: "should",
     phase: 3,
     engineMethod: "sign",
     actionLabel: "Sign and save",
-    keywords: ["signature", "e-sign", "initials", "fill and sign"],
+    keywords: ["signature", "e-sign", "initials", "fill and sign", "certificate", "pfx", "digital"],
     layout: "sign",
-    summary: (s) =>
-      typeof s.objects === "number"
-        ? `${s.objects} ${s.objects === 1 ? "item" : "items"} signed onto the document`
+    toEngine: (o) =>
+      o.digital === true
+        ? { certificate: o.certificate, reason: o.reason, location: o.location }
+        : {},
+    check: (o) =>
+      o.digital === true && !(typeof o.certificate === "string" && o.certificate.trim())
+        ? "Choose your certificate file."
         : null,
+    summary: (s) => {
+      const items =
+        typeof s.objects === "number" && s.objects > 0
+          ? `${s.objects} ${s.objects === 1 ? "item" : "items"} signed onto the document`
+          : null;
+      const digital =
+        s.digital_signature === true && typeof s.signer === "string"
+          ? `digitally signed as ${s.signer}`
+          : null;
+      const text = [items, digital].filter(Boolean).join(" · ");
+      return text ? text.charAt(0).toUpperCase() + text.slice(1) : null;
+    },
   },
   {
     id: "redact",

@@ -1010,6 +1010,33 @@ if (section("explorer")) {
   ok("Windows integration setting shown");
 }
 
+if (section("certsign")) {
+  console.log("Sign PDF with a certificate");
+  await go("#/"); // leave a previous Sign result screen
+  await go("#/tool/sign");
+  await addFiles("contract v1.pdf");
+  await page.getByTestId("editor-canvas").waitFor({ timeout: 30_000 });
+  await page.getByLabel("Add a digital signature").click();
+  expect(
+    await page.getByRole("button", { name: "Sign and save" }).isDisabled(),
+    "certificate required once the digital signature is on",
+  );
+  await page.evaluate(
+    (path) =>
+      window.dispatchEvent(
+        new CustomEvent("pdfforge:test-pick-file", { detail: { key: "certificate", path } }),
+      ),
+    join(inputDir, "my-certificate.pfx"),
+  );
+  await page.getByText("my-certificate.pfx").waitFor();
+  await page.getByLabel("Certificate password", { exact: true }).fill("Cert-Pass-1");
+  await page.getByLabel("Reason (optional)").fill("Approved");
+  await shot("certsign-ready");
+  const text = await runAndWait("Sign and save");
+  expect(text.includes("Digitally signed as Asha Raman"), "digitally signed as Asha Raman");
+  expect(/contract v1_signed( \(\d+\))?\.pdf/.test(text), "output contract v1_signed.pdf");
+}
+
 if (section("batch")) {
   console.log("Batch mode");
   await go("#/tool/compress");
