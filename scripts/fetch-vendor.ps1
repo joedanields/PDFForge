@@ -69,7 +69,7 @@ $Tessdata = [ordered]@{
     hin = '4C73FFC59D497C186B19D1E90F5D721D678EA6B2E277B719BEE4E2AF12271825'
 }
 # Bump when the trimming rules below change, so existing vendor folders are rebuilt.
-$TrimRevision = 3
+$TrimRevision = 4
 
 # Source code shipped in the installer for the copyleft libraries inside the Tesseract build
 # (licenses/source, docs/09 §4, D-035): upstream releases + the MSYS2 build recipe.
@@ -190,6 +190,9 @@ function Install-LibreOffice {
     $fontDir = Join-Path $share 'fonts\truetype'
     New-Item -ItemType Directory -Force -Path $fontDir | Out-Null
     Get-ChildItem (Join-Path $unpacked 'Fonts') -File | Move-Item -Destination $fontDir -Force
+    # Linux Libertine G / Biolinum G (~22 MB) are LibreOffice's own design fonts, not used by
+    # Office documents; the metric-compatible Liberation/Carlito/Caladea fonts stay (D-045).
+    Get-ChildItem $fontDir -Filter 'Lin*_G.ttf' | Remove-Item -Force
     # Visual C++ runtime the MSI would install system-wide: keep it next to soffice.bin.
     Get-ChildItem (Join-Path $unpacked 'System64') -File | Move-Item -Destination (Join-Path $unpacked 'program') -Force
     Remove-Paths $unpacked @('Fonts', 'System', 'System64')
@@ -221,6 +224,43 @@ $TesseractRuntime = @(
     'libtiff-6.dll', 'libwebp-7.dll', 'libwebpmux-3.dll', 'libwinpthread-1.dll', 'libzstd.dll',
     'zlib1.dll'
 )
+
+function Find-Strippers {
+    # GNU binutils first (MinGW-native); LLVM's objcopy rejects some MinGW symbol tables.
+    $tools = @()
+    foreach ($name in @('strip', 'objcopy', 'llvm-objcopy')) {
+        $cmd = Get-Command $name -ErrorAction SilentlyContinue
+        if ($cmd) { $tools += $cmd.Source }
+    }
+    $sysroot = (& rustc --print sysroot 2>$null)
+    if ($sysroot) {
+        $found = Get-ChildItem (Join-Path $sysroot 'lib\rustlib') -Recurse -Filter 'rust-objcopy.exe' -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if ($found) { $tools += $found.FullName }
+    }
+    return $tools
+}
+
+function Remove-DebugInfo([string]$file) {
+    $before = (Get-Item $file).Length
+    $backup = "$file.orig"
+    Copy-Item $file $backup -Force
+    foreach ($tool in (Find-Strippers)) {
+        $previous = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        & $tool --strip-debug $file 2>&1 | Out-Null
+        $ErrorActionPreference = $previous
+        if ($LASTEXITCODE -eq 0) {
+            Remove-Item $backup -Force
+            Write-Host ("    stripped {0} with {1}: {2:N0} MB -> {3:N0} MB" -f [IO.Path]::GetFileName($file),
+                [IO.Path]::GetFileName($tool), ($before / 1MB), ((Get-Item $file).Length / 1MB))
+            return
+        }
+        Copy-Item $backup $file -Force  # a failed attempt may leave a damaged file
+    }
+    Move-Item $backup $file -Force
+    Write-Warning "No working strip/objcopy: $([IO.Path]::GetFileName($file)) keeps its debug info (larger installer)"
+}
 
 function Install-Tesseract {
     $dir = Join-Path $vendor 'tesseract'
@@ -254,6 +294,10 @@ function Install-Tesseract {
         Copy-Item $model (Join-Path $out "tessdata\$lang.traineddata")
     }
     Remove-Item -Recurse -Force $unpacked
+    # The UB Mannheim libtesseract-5.dll carries ~97 MB of DWARF debug sections; drop them
+    # (code unchanged, D-045). Only Tesseract's own Apache-2.0 DLL: the GPL/LGPL libraries
+    # stay byte-identical to the shipped source (licenses/source).
+    Remove-DebugInfo (Join-Path $out 'libtesseract-5.dll')
 
     if (Test-Path $dir) { Remove-Item -Recurse -Force $dir }
     Move-Item $out $dir

@@ -9,6 +9,8 @@
 // UI) each tool is submitted through the app's own run_job command — the same path the UI uses —
 // and its output is confirmed via recent outputs. This exercises the frozen engine's native
 // libraries (qpdf, PDFium, Pillow, libheif, ReportLab) end to end.
+import { existsSync, readFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
 
@@ -79,7 +81,42 @@ const JOBS = {
     // A signature picture is created in the page (canvas) right before the job runs.
     signature: true,
   },
+  // Phase 4: forms, workflows, certificate signing (pyHanko), web page (local server).
+  "fill-forms": {
+    inputs: [f("application.pdf")],
+    options: { values: { name: "Release check", agree: true, size: "large" }, flatten: true },
+  },
+  workflow: {
+    inputs: [f("mixed.pdf")],
+    options: {
+      name: "Release flow",
+      steps: [
+        { tool: "rotate", options: { angle: 90, pages: "all" } },
+        { tool: "page-numbers", options: {} },
+        { tool: "protect", options: {} },
+      ],
+    },
+    secrets: { steps: [{}, {}, { user_password: "release-pw" }] },
+  },
+  "sign-certificate": {
+    method: "sign",
+    inputs: [f("contract v1.pdf")],
+    options: { objects: [], certificate: f("my-certificate.pfx"), reason: "Release check" },
+    secrets: { certificate_password: "Cert-Pass-1" },
+  },
+  "url-to-pdf": { web: true, output_dir: dir },
 };
+
+// "Web Page to PDF" against a local web server (the engine always allows loopback).
+const site = join(dir, "site");
+const server = createServer((req, res) => {
+  const path = join(site, decodeURIComponent((req.url ?? "/").split("?")[0]));
+  if (!existsSync(path) || path === site) return void res.writeHead(404).end();
+  const type = path.endsWith(".html") ? { "Content-Type": "text/html" } : {};
+  res.writeHead(200, type).end(readFileSync(path));
+});
+await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+const webUrl = `http://127.0.0.1:${server.address().port}/index.html`;
 
 const browser = await chromium.connectOverCDP("http://127.0.0.1:9222");
 const page = browser
@@ -109,8 +146,14 @@ await page.getByText("Done!").waitFor({ timeout: 30_000 });
 console.log("  ✓ echo (UI)");
 
 let failed = 0;
-for (const [method, params] of Object.entries(JOBS)) {
-  if (only && !only.has(method)) continue;
+for (const [name, params] of Object.entries(JOBS)) {
+  if (only && !only.has(name)) continue;
+  const method = params.method ?? name;
+  delete params.method;
+  if (params.web) {
+    delete params.web;
+    params.options = { url: webUrl };
+  }
   const id = `job-release-${method}-${Date.now()}`;
   const started = Date.now();
   const before = (await invoke("list_recents", { limit: 1 }))[0]?.createdAt ?? 0;
@@ -144,13 +187,14 @@ for (const [method, params] of Object.entries(JOBS)) {
   }
   if (recent && recent.exists) {
     console.log(
-      `  ✓ ${method.padEnd(14)} ${((Date.now() - started) / 1000).toFixed(1)} s → ${recent.path.split(/[\\/]/).pop()}`,
+      `  ✓ ${name.padEnd(17)} ${((Date.now() - started) / 1000).toFixed(1)} s → ${recent.path.split(/[\\/]/).pop()}`,
     );
   } else {
     failed += 1;
-    console.log(`  ✗ ${method}: no output within 120 s`);
+    console.log(`  ✗ ${name}: no output within 120 s`);
   }
 }
+server.close();
 if (errors.length) console.log(`page errors: ${errors.join(" | ")}`);
 await browser.close();
 if (failed || errors.length) process.exit(1);

@@ -104,7 +104,8 @@ Last verified: 2026-10-19 — full gates green (443 pytest, 91 vitest, 26 Rust t
 | 4.5 Digital certificate signing (F3, pyHanko) | done | test_cert_sign (7), smoke `certsign` | 8cc9d26 | own PFX/P12, invisible signature after the visible items, offline; D-041 |
 | 4.6 Tamil and Hindi UI | done | vitest i18n (5), Rust settings (+1), smoke `language` | 687b797 | language picker; every key, tool and option translated; engine messages stay English; D-042 |
 | 4.7 HTML → PDF from URL ("Web Page to PDF") | done | test_url_to_pdf (10), vitest registry, smoke `web` | ab9e29c | the only online tool: badge, banner, first-time confirmation; scoped network allowance; D-043 |
-| 4.8 Auto-update (Tauri updater, off by default) | done | Rust updater (2) + settings, smoke `updates` (default and with a signed test endpoint) | (this commit) | endpoint + key from config, opt-in start-up check, dev key pair in git-ignored .keys/, owner steps in 06 §6; D-044 |
+| 4.8 Auto-update (Tauri updater, off by default) | done | Rust updater (2) + settings, smoke `updates` (default and with a signed test endpoint) | 8f43f9d | endpoint + key from config, opt-in start-up check, dev key pair in git-ignored .keys/, owner steps in 06 §6; D-044 |
+| 4.9 Installer size + notices + release smoke | done | test_office (+1), release smoke 35 checks, full UI smoke 37 sections | (this commit) | 184.6 MB → 167.5 MB: stripped libtesseract debug info, dropped Libertine G fonts, 64 MB LZMA dictionary; LibreOffice profile template keyed to the install; notices regenerated (pyHanko, updater, winreg); D-045 |
 
 ## Phase 3 — Editing & security
 

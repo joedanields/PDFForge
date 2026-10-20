@@ -77,6 +77,7 @@ pdfminer.six and pypdf are used by tools and therefore shipped.
 
 ## 4. Obligations checklist
 - [x] Ship `THIRD_PARTY_NOTICES.txt` with all licenses (generated from the real dependency tree by `scripts/generate_notices.py`, bundled in the installer); Settings → About → *Third-party licences* opens it.
+- Tesseract: debug information is stripped from `libtesseract-5.dll` (Apache-2.0, allowed); the GPL/LGPL libraries are shipped unmodified (D-045).
 - [x] Source / written offer for the copyleft components (D-035). The installer ships a `licenses\` folder (repo: `licenses/`, Settings → About → *Licences and source code* opens it):
   - `licenses\source\` — JBIG-KIT 2.1 upstream tarball + the MSYS2 `mingw-w64-jbigkit-2.1-5` recipe, GNU libiconv 1.17 upstream tarball + GNU signature, `SHA256SUMS.txt` (fetched and hash-checked by `scripts/fetch-vendor.ps1` into `vendor/source-archives`);
   - `licenses\WRITTEN_OFFER.txt` — 3-year written offer for the exact corresponding source of every GPL/LGPL/MPL component (JBIG-KIT, libiconv, GCC runtime, libheif/libde265, img2pdf, LibreOffice, pikepdf).

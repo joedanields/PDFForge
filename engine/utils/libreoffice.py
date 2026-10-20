@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -87,8 +88,22 @@ def cache_root() -> Path:
     return Path(base) / "PDFForge" / "cache"
 
 
+def _install_id() -> str:
+    """Identifies the LibreOffice installation: a profile made by another installation (after
+    an app update) can make LibreOffice resync and quit without converting."""
+    program = soffice_path().parent
+    stamp = program.parent / ".pdfforge-vendor"
+    try:
+        basis = stamp.read_text(encoding="utf-8") if stamp.is_file() else ""
+        info = (program / "mergedlo.dll").stat() if (program / "mergedlo.dll").is_file() else None
+        basis += f"|{info.st_size}|{int(info.st_mtime)}" if info else ""
+    except OSError:
+        basis = ""
+    return hashlib.sha256(basis.encode()).hexdigest()[:10]
+
+
 def _template_dir() -> Path:
-    return cache_root() / f"lo-profile-{PROFILE_REVISION}"
+    return cache_root() / f"lo-profile-{PROFILE_REVISION}-{_install_id()}"
 
 
 def _prepare_profile() -> Path:

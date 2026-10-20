@@ -214,3 +214,23 @@ def test_csv_and_ods_via_xlsx_with_options(tmp_path: Path, ctx: RecordingContext
     fitted = run(excel_to_pdf, RecordingContext(tmp_path / "j2"), [csv], fit_width=True)
     assert fitted.outputs[0].name == "people (1).pdf"
     assert "Chennai" in page_texts(fitted.outputs[0])[0]
+
+
+def test_profile_template_belongs_to_one_installation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A profile made by another LibreOffice installation (before an app update) is never reused:
+    LibreOffice would resync it and quit without converting."""
+    from utils import libreoffice
+
+    program = tmp_path / "libreoffice" / "program"
+    program.mkdir(parents=True)
+    (program / "soffice.com").write_bytes(b"")
+    (program / "mergedlo.dll").write_bytes(b"x" * 10)
+    stamp = tmp_path / "libreoffice" / ".pdfforge-vendor"
+    stamp.write_text("26.2.6 abc trim3", encoding="utf-8")
+    monkeypatch.setattr(libreoffice, "soffice_path", lambda: program / "soffice.com")
+    before = libreoffice._template_dir()
+    assert before == libreoffice._template_dir()
+    stamp.write_text("26.2.6 abc trim4", encoding="utf-8")
+    assert libreoffice._template_dir() != before

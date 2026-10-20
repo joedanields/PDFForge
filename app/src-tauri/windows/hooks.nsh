@@ -2,6 +2,10 @@
 ; Explorer right-click entries for PDFs, per user (HKCU): no administrator rights needed.
 ; Keep in sync with src/contextmenu.rs; Settings -> Windows integration can turn them off.
 
+; Installer size (D-045): a 64 MB LZMA dictionary instead of NSIS' 8 MB default finds the
+; repeats across LibreOffice's ~500 MB much better. Included before any data is compressed.
+SetCompressorDictSize 64
+
 !define PDFFORGE_SHELL "Software\Classes\SystemFileAssociations\.pdf\shell"
 
 !macro NSIS_HOOK_POSTINSTALL
