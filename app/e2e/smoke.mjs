@@ -8,7 +8,8 @@
 // File-based sections need a dev build (file-injection seam). --echo-only runs just the engine
 // self-test, which also works against the built .exe.
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
 
@@ -45,8 +46,9 @@ const AVAILABLE = [
   "redact",
   "compare",
   "fill-forms",
+  "url-to-pdf",
 ];
-const TOTAL_TOOLS = 31;
+const TOTAL_TOOLS = 32;
 
 const args = process.argv.slice(2);
 const inputDir = args.find(
@@ -1035,6 +1037,52 @@ if (section("certsign")) {
   const text = await runAndWait("Sign and save");
   expect(text.includes("Digitally signed as Asha Raman"), "digitally signed as Asha Raman");
   expect(/contract v1_signed( \(\d+\))?\.pdf/.test(text), "output contract v1_signed.pdf");
+}
+
+if (section("web")) {
+  console.log("Web Page to PDF (the only online tool)");
+  // A local web server plays the website; the engine always allows loopback.
+  const site = join(inputDir, "site");
+  const server = createServer((req, res) => {
+    const path = join(site, decodeURIComponent((req.url ?? "/").split("?")[0]));
+    if (!existsSync(path) || path.endsWith("site")) {
+      res.writeHead(404).end();
+      return;
+    }
+    const type = path.endsWith(".html") ? "text/html" : path.endsWith(".css") ? "text/css" : "";
+    res.writeHead(200, type ? { "Content-Type": type } : {}).end(readFileSync(path));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const url = `http://127.0.0.1:${server.address().port}/index.html`;
+  try {
+    await go("#/");
+    await page.getByText("Uses the internet").first().waitFor();
+    ok("home card badged 'Uses the internet'");
+    await go("#/tool/url-to-pdf");
+    await page.getByText("It is the only PDFForge tool that goes online").waitFor();
+    await page.evaluate(
+      (dir) => window.dispatchEvent(new CustomEvent("pdfforge:test-output-dir", { detail: dir })),
+      inputDir,
+    );
+    await page.getByLabel("Web address", { exact: true }).fill(url);
+    await page.getByRole("button", { name: "Download and convert", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByText("Go online?").waitFor();
+    expect((await dialog.innerText()).includes(url), "confirmation names the address");
+    await shot("web-confirm");
+    await dialog.getByRole("button", { name: "Download and convert" }).click();
+    await page.getByText("Done!").waitFor({ timeout: 90_000 });
+    const text = await page.locator("main section[aria-live=polite]").innerText();
+    expect(text.includes(url), "summary shows the address");
+    expect(/\.pdf/.test(text), "PDF saved");
+    await shot("web-result");
+    await go("#/settings");
+    await page.getByRole("button", { name: "Ask before going online again" }).click();
+    await page.getByText("PDFForge will ask before going online.").waitFor();
+    ok("confirmation can be asked again");
+  } finally {
+    server.close();
+  }
 }
 
 if (section("batch")) {

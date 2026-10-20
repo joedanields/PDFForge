@@ -1,10 +1,11 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { ArrowLeft, CircleAlert, Copy, FolderPlus, Info } from "lucide-react";
+import { ArrowLeft, CircleAlert, Copy, FolderPlus, Globe, Info } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { BatchView } from "@/components/BatchView";
 import { DropZone } from "@/components/DropZone";
 import { FileList } from "@/components/FileList";
+import { OnlineConfirm } from "@/components/OnlineConfirm";
 import { OptionsForm } from "@/components/OptionsForm";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
 import { type Change, CompareView } from "@/components/CompareView";
@@ -239,6 +240,12 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     window.addEventListener("pdfforge:test-add-files", onTestFiles);
     return () => window.removeEventListener("pdfforge:test-add-files", onTestFiles);
   }, [addPaths]);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const onTestDir = (e: Event) => setOutputDir((e as CustomEvent<string>).detail);
+    window.addEventListener("pdfforge:test-output-dir", onTestDir);
+    return () => window.removeEventListener("pdfforge:test-output-dir", onTestDir);
+  }, []);
 
   // Files from outside the app (Explorer "Merge with PDFForge"), arriving one launch at a time.
   const incoming = useAppStore((s) => s.incoming[tool.id]?.length ?? 0);
@@ -440,8 +447,16 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     }
   };
 
-  const run = async () => {
+  // The only online tool asks once before going online (D-043).
+  const [askOnline, setAskOnline] = useState(false);
+  const saveSettings = useAppStore((s) => s.saveSettings);
+
+  const run = async (confirmedOnline = false) => {
     if (!canRun || !tool.engineMethod) return;
+    if (tool.usesInternet && !settings.onlineConfirmed && !confirmedOnline) {
+      setAskOnline(true);
+      return;
+    }
     setNotice(null);
     const passwords = Object.fromEntries(
       files.filter((f) => f.password).map((f) => [f.path, f.password ?? ""]),
@@ -770,6 +785,12 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
                   )}
               </>
             )}
+          {tool.usesInternet && (
+            <p className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+              <Globe className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+              {t("online.banner")}
+            </p>
+          )}
           {!needsFiles && (
             <div className="rounded-card border bg-surface-2/50 p-8 text-text-muted">
               {tx(tool.description)}
@@ -805,10 +826,13 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
             disabled={!editing}
             pageCount={pageCount}
           />
-          {needsFiles && (
+          {(needsFiles || tool.outputFolder) && (
             <OutputFolderPicker
               value={outputDir}
-              fallbackLabel={settings.defaultOutputDir ?? t("tool.outputDefault")}
+              fallbackLabel={
+                settings.defaultOutputDir ??
+                t(needsFiles ? "tool.outputDefault" : "tool.outputDownloads")
+              }
               onChange={setOutputDir}
               disabled={!editing}
             />
@@ -822,6 +846,18 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
           </div>
         </aside>
 
+        {tool.usesInternet && (
+          <OnlineConfirm
+            open={askOnline}
+            url={typeof options.url === "string" ? options.url : ""}
+            onCancel={() => setAskOnline(false)}
+            onConfirm={(remember) => {
+              setAskOnline(false);
+              if (remember) void saveSettings({ onlineConfirmed: true });
+              void run(true);
+            }}
+          />
+        )}
         {phase.kind === "running" && (
           <ProgressOverlay
             toolName={tx(tool.name)}

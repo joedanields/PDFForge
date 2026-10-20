@@ -43,6 +43,7 @@ _TARGETS: dict[str, str] = {
     "split": "organize:split",
     "text-to-pdf": "to_pdf:text_to_pdf",
     "unlock": "security:unlock",
+    "url-to-pdf": "to_pdf:url_to_pdf",
     "watermark": "edit:watermark",
     "word-to-pdf": "office:word_to_pdf",
     "workflow": "workflow:workflow",

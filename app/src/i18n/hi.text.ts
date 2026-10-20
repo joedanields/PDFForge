@@ -469,4 +469,13 @@ export const hiText: Readonly<Record<string, string>> = {
   "“{part}” runs backwards; write it as {last}-{first}":
     "“{part}” उलटा है; इसे {last}-{first} लिखें",
   Strength: "मज़बूती",
+  "Web Page to PDF": "वेब पेज से PDF",
+  "Save a page from the internet as a PDF. The only tool that goes online.":
+    "इंटरनेट से कोई पेज PDF के रूप में सहेजें। ऑनलाइन जाने वाला अकेला टूल।",
+  "Download and convert": "डाउनलोड करें और बदलें",
+  "Web address": "वेब पता",
+  "The page and its pictures and style sheets are downloaded. Scripts never run.":
+    "पेज और उसकी छवियाँ और स्टाइल शीट डाउनलोड होती हैं। स्क्रिप्ट कभी नहीं चलतीं।",
+  "https://example.com/article": "https://example.com/article",
+  "Enter a web address.": "एक वेब पता डालें।",
 };

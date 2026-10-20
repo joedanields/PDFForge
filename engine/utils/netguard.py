@@ -1,14 +1,17 @@
 """Block outbound network access inside the engine (docs/01_PRD.md G2, 05 S1/S2).
 
-No engine tool needs the network. Only loopback connections are allowed (Windows uses them
-internally for ``socket.socketpair``). Future network features (HTML from URL) must be explicitly
-user-initiated and will get a scoped exception.
+Only loopback connections are allowed (Windows uses them internally for
+``socket.socketpair``). The one exception is "Web page to PDF" (D-043): the user types an
+address and confirms, and that tool opens connections inside ``allowed()`` only.
 """
 
 from __future__ import annotations
 
 import ipaddress
 import socket
+import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 
@@ -17,6 +20,22 @@ class NetworkBlockedError(OSError):
 
 
 _installed = False
+_allowance = threading.local()
+
+
+@contextmanager
+def allowed() -> Iterator[None]:
+    """Permit outbound connections from this thread for the duration of the block."""
+    previous = getattr(_allowance, "on", False)
+    _allowance.on = True
+    try:
+        yield
+    finally:
+        _allowance.on = previous
+
+
+def _permitted(address: Any) -> bool:
+    return bool(getattr(_allowance, "on", False)) or _is_loopback(address)
 
 
 def _is_loopback(address: Any) -> bool:
@@ -42,17 +61,17 @@ def install() -> None:
     original_getaddrinfo = socket.getaddrinfo
 
     def guarded_connect(self: socket.socket, address: Any) -> None:
-        if self.family in (socket.AF_INET, socket.AF_INET6) and not _is_loopback(address):
+        if self.family in (socket.AF_INET, socket.AF_INET6) and not _permitted(address):
             raise NetworkBlockedError("Network access is disabled in the PDFForge engine")
         original_connect(self, address)
 
     def guarded_connect_ex(self: socket.socket, address: Any) -> int:
-        if self.family in (socket.AF_INET, socket.AF_INET6) and not _is_loopback(address):
+        if self.family in (socket.AF_INET, socket.AF_INET6) and not _permitted(address):
             raise NetworkBlockedError("Network access is disabled in the PDFForge engine")
         return original_connect_ex(self, address)
 
     def guarded_getaddrinfo(host: Any, *args: Any, **kwargs: Any) -> Any:
-        if host is not None and not _is_loopback(host if isinstance(host, str) else str(host)):
+        if host is not None and not _permitted(host if isinstance(host, str) else str(host)):
             raise NetworkBlockedError("Network access is disabled in the PDFForge engine")
         return original_getaddrinfo(host, *args, **kwargs)
 

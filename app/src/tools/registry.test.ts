@@ -56,12 +56,16 @@ const IMPLEMENTED = [
   "redact",
   "compare",
   "fill-forms",
+  "url-to-pdf",
 ];
 
 describe("tool registry contents", () => {
-  it("covers every tool of sections A–F exactly once", () => {
+  it("covers every tool of sections A–F", () => {
     const refs = product.filter((t) => t.ref !== "I").map((t) => t.ref);
-    expect(refs.sort()).toEqual([...FEATURE_REFS].sort());
+    expect([...new Set(refs)].sort()).toEqual([...FEATURE_REFS].sort());
+    // C5 is HTML → PDF from a file and from a web address (the one online tool, D-043).
+    expect(refs.filter((r) => r === "C5")).toHaveLength(2);
+    expect(refs.length).toBe(FEATURE_REFS.length + 1);
   });
 
   it("has the three Intelligence tools from section I", () => {
@@ -144,11 +148,11 @@ describe("visibility", () => {
     const visible = visibleTools({ dev: false, intelligence: false });
     expect(visible.some((t) => t.devOnly)).toBe(false);
     expect(visible.some((t) => t.requiresIntelligence)).toBe(false);
-    expect(visible).toHaveLength(31);
+    expect(visible).toHaveLength(32);
   });
 
   it("shows Intelligence tools and chip when enabled", () => {
-    expect(visibleTools({ dev: false, intelligence: true })).toHaveLength(34);
+    expect(visibleTools({ dev: false, intelligence: true })).toHaveLength(35);
     expect(filterChips(true)).toContain("intelligence");
     expect(filterChips(false)).not.toContain("intelligence");
   });
@@ -169,7 +173,7 @@ describe("category filter", () => {
   it.each([
     ["organize", 6],
     ["optimize", 3],
-    ["convert", 12],
+    ["convert", 13],
     ["edit", 5],
     ["security", 5],
   ] as const)("%s has %i tools", (category, count) => {

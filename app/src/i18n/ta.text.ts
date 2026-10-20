@@ -474,4 +474,13 @@ export const taText: Readonly<Record<string, string>> = {
   "“{part}” runs backwards; write it as {last}-{first}":
     "“{part}” தலைகீழாக உள்ளது; {last}-{first} என எழுதுங்கள்",
   Strength: "வலிமை",
+  "Web Page to PDF": "வலைப்பக்கம் → PDF",
+  "Save a page from the internet as a PDF. The only tool that goes online.":
+    "இணையத்திலிருந்து ஒரு பக்கத்தை PDF ஆகச் சேமிக்கவும். இணையத்துக்குச் செல்லும் ஒரே கருவி.",
+  "Download and convert": "பதிவிறக்கி மாற்று",
+  "Web address": "வலை முகவரி",
+  "The page and its pictures and style sheets are downloaded. Scripts never run.":
+    "பக்கமும் அதன் படங்கள், பாணித் தாள்களும் பதிவிறக்கப்படும். ஸ்கிரிப்ட்கள் ஒருபோதும் இயங்காது.",
+  "https://example.com/article": "https://example.com/article",
+  "Enter a web address.": "ஒரு வலை முகவரியை உள்ளிடுங்கள்.",
 };

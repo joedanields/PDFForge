@@ -16,7 +16,7 @@
 | ID | Requirement |
 |----|-------------|
 | S1 | No document content, file names or metadata leave the device. No telemetry by default; any crash reporting is opt-in and strips paths. |
-| S2 | Only network uses: update check (opt-in), HTML-from-URL, optional AI features — each clearly labeled. |
+| S2 | Only network uses: update check (opt-in), HTML-from-URL, optional AI features — each clearly labeled. **Implemented:** "Web Page to PDF" is the only engine tool with a network exception (`utils/netguard.allowed()` inside `utils/webfetch.py`); badge on its card, banner on its page, confirmation the first time (D-043). The updater is off by default (D-044). |
 | S3 | Temp files written to per-job folder, deleted on completion/cancel and swept at startup. |
 | S4 | Passwords never logged or persisted. Saved signatures encrypted via Windows DPAPI. |
 | S5 | Redaction removes underlying content (verified by tests). |

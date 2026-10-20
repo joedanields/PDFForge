@@ -22,6 +22,7 @@ interface AppStore {
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   language: "en",
+  onlineConfirmed: false,
   defaultOutputDir: null,
 };
 

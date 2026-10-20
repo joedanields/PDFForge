@@ -55,6 +55,8 @@ export interface Settings {
   theme: Theme;
   /** UI language (src-tauri/src/settings.rs). */
   language: Locale;
+  /** "Web page to PDF" may go online without asking again (D-043). */
+  onlineConfirmed: boolean;
   defaultOutputDir: string | null;
 }
 

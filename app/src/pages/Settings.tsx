@@ -120,6 +120,7 @@ export function SettingsPage() {
 
       <Section title={t("settings.privacy")}>
         <p className="text-sm text-text-muted">{t("settings.offline")}</p>
+        <p className="text-sm text-text-muted">{t("settings.onlineNote")}</p>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => void clear()}>
             {t("settings.clearHistory")}
@@ -136,6 +137,17 @@ export function SettingsPage() {
           >
             {t("settings.clearSignatures")}
           </Button>
+          {settings.onlineConfirmed && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                save({ onlineConfirmed: false });
+                setMessage({ tone: "ok", text: t("settings.onlineResetDone") });
+              }}
+            >
+              {t("settings.onlineReset")}
+            </Button>
+          )}
         </div>
       </Section>
 

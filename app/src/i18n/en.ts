@@ -22,6 +22,20 @@ export const en = {
   "tool.options": "Options",
   "tool.output": "Output folder",
   "tool.outputDefault": "Same folder as the first file",
+  "tool.outputDownloads": "Your Downloads folder",
+  "online.badge": "Uses the internet",
+  "online.banner":
+    "This tool connects to the internet to download the page you enter. It is the only PDFForge tool that goes online.",
+  "online.title": "Go online?",
+  "online.body":
+    "PDFForge will download {url} and the pictures and style sheets it uses, then turn it into a PDF on this computer. Nothing from your computer is uploaded; like any visit, the website sees your IP address. This is the only feature that uses the internet.",
+  "online.confirm": "Download and convert",
+  "online.cancel": "Cancel",
+  "online.remember": "Don't ask again",
+  "settings.onlineNote":
+    "Only “Web Page to PDF” connects to the internet, and only when you run it.",
+  "settings.onlineReset": "Ask before going online again",
+  "settings.onlineResetDone": "PDFForge will ask before going online.",
   "tool.change": "Change…",
   "tool.reset": "Reset",
   "tool.sortName": "Sort by name",

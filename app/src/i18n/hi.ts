@@ -24,6 +24,20 @@ export const hi: Record<MessageKey, string> = {
   "tool.options": "विकल्प",
   "tool.output": "आउटपुट फ़ोल्डर",
   "tool.outputDefault": "पहली फ़ाइल वाला ही फ़ोल्डर",
+  "tool.outputDownloads": "आपका Downloads फ़ोल्डर",
+  "online.badge": "इंटरनेट का उपयोग करता है",
+  "online.banner":
+    "आपका डाला गया पेज डाउनलोड करने के लिए यह टूल इंटरनेट से जुड़ता है। यह PDFForge का अकेला टूल है जो ऑनलाइन जाता है।",
+  "online.title": "ऑनलाइन जाएँ?",
+  "online.body":
+    "PDFForge {url} और उसकी इस्तेमाल की गई छवियाँ और स्टाइल शीट डाउनलोड करेगा, फिर इसी कंप्यूटर पर उसे PDF में बदलेगा। आपके कंप्यूटर से कुछ भी अपलोड नहीं होता; किसी भी विज़िट की तरह, वेबसाइट आपका IP पता देखती है। यह अकेली सुविधा है जो इंटरनेट का उपयोग करती है।",
+  "online.confirm": "डाउनलोड करें और बदलें",
+  "online.cancel": "रद्द करें",
+  "online.remember": "फिर से न पूछें",
+  "settings.onlineNote":
+    "केवल “वेब पेज से PDF” इंटरनेट से जुड़ता है, और वह भी तभी जब आप उसे चलाते हैं।",
+  "settings.onlineReset": "ऑनलाइन जाने से पहले फिर से पूछें",
+  "settings.onlineResetDone": "ऑनलाइन जाने से पहले PDFForge पूछेगा।",
   "tool.change": "बदलें…",
   "tool.reset": "रीसेट",
   "tool.sortName": "नाम से क्रमबद्ध करें",

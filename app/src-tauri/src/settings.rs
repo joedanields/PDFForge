@@ -30,6 +30,8 @@ pub enum Language {
 pub struct Settings {
     pub theme: Theme,
     pub language: Language,
+    /// The user confirmed once that "Web page to PDF" may go online (D-043).
+    pub online_confirmed: bool,
     /// `None` = save next to the first input file (docs/02 common rules).
     pub default_output_dir: Option<String>,
 }

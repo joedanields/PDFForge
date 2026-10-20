@@ -1,3 +1,4 @@
+import { Globe } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { t, tx } from "@/i18n";
@@ -20,6 +21,12 @@ export function ToolCard({ tool }: { tool: ToolDef }) {
           <Icon className="size-6" aria-hidden />
         </span>
         {!available && <Badge variant="soon">{t("badge.comingSoon")}</Badge>}
+        {available && tool.usesInternet && (
+          <Badge variant="soon" className="gap-1">
+            <Globe className="size-3" aria-hidden />
+            {t("online.badge")}
+          </Badge>
+        )}
       </div>
       <h3 className="mt-4 text-base font-semibold text-text">{tx(tool.name)}</h3>
       <p className="mt-1 line-clamp-2 text-sm text-text-muted">{tx(tool.description)}</p>

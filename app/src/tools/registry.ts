@@ -14,6 +14,7 @@ import {
   FileOutput,
   FileSpreadsheet,
   FileText,
+  Globe,
   FileType,
   FlaskConical,
   GitCompareArrows,
@@ -99,6 +100,11 @@ export interface ToolDef {
   toEngine?: (options: Record<string, unknown>) => Record<string, unknown>;
   /** Extra blocker message before Run (e.g. "can't remove every page"). */
   check?: (options: Record<string, unknown>, ctx: CheckContext) => string | null;
+  /** The only kind of tool that goes online: badge, banner and a first-time confirmation
+   * (D-043). */
+  usesInternet?: boolean;
+  /** Tool without input files that still saves a file (shows the output folder). */
+  outputFolder?: boolean;
   /** Single-file tool that can run on many files one by one (batch mode, docs/02 §H). */
   batch?: boolean;
   /** Files that cannot be previewed are still accepted (Repair works on damaged PDFs). */
@@ -778,6 +784,19 @@ export const redactOptions = z.object({
   ),
 });
 
+export const urlToPdfOptions = z.object({
+  url: opt.text(
+    "Web address",
+    "",
+    "The page and its pictures and style sheets are downloaded. Scripts never run.",
+    { placeholder: "https://example.com/article" },
+  ),
+  page_size: htmlToPdfOptions.shape.page_size,
+  orientation: htmlToPdfOptions.shape.orientation,
+  margins: htmlToPdfOptions.shape.margins,
+  background: opt.bool("Include background colours and images", true),
+});
+
 export const signOptions = z.object({
   digital: opt.bool(
     "Add a digital signature",
@@ -1218,6 +1237,34 @@ export const TOOLS: readonly ToolDef[] = [
       }
       if (typeof s.missing_files === "number") {
         parts.push(`${s.missing_files} linked files not found`);
+      }
+      return parts.join(" · ");
+    },
+  },
+  {
+    id: "url-to-pdf",
+    ref: "C5",
+    name: "Web Page to PDF",
+    description: "Save a page from the internet as a PDF. The only tool that goes online.",
+    category: "convert",
+    icon: Globe,
+    accepts: { extensions: [], min: 0, max: 0, label: "No files needed" },
+    optionsSchema: urlToPdfOptions,
+    status: "available",
+    priority: "should",
+    phase: 4,
+    engineMethod: "url-to-pdf",
+    actionLabel: "Download and convert",
+    keywords: ["url", "website", "web page", "link", "internet", "online", "save page"],
+    usesInternet: true,
+    outputFolder: true,
+    check: (o) => (typeof o.url === "string" && o.url.trim() ? null : "Enter a web address."),
+    summary: (s) => {
+      if (typeof s.pages !== "number") return null;
+      const parts = [`${s.pages} ${s.pages === 1 ? "page" : "pages"}`];
+      if (typeof s.url === "string") parts.push(s.url);
+      if (typeof s.resources_failed === "number") {
+        parts.push(`${s.resources_failed} pictures or styles could not be downloaded`);
       }
       return parts.join(" · ");
     },

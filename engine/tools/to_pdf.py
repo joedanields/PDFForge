@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import img2pdf
 from pikepdf import Pdf
@@ -15,7 +16,8 @@ from reportlab.platypus import SimpleDocTemplate, Spacer
 
 from jobs import JobContext, ToolResult
 from protocol import EngineError, ErrorCode
-from utils import html_prep, libreoffice
+from utils import html_prep, libreoffice, webfetch
+from utils.atomic import commit
 from utils.images import image_to_pdf_bytes
 from utils.naming import sanitize_stem
 from utils.pagecopy import PageCopier
@@ -27,6 +29,8 @@ from utils.validation import (
     option_bool,
     option_choice,
     option_float,
+    option_str,
+    optional_str,
     options_dict,
     require_str_list,
 )
@@ -253,3 +257,48 @@ def html_to_pdf(params: dict[str, Any], ctx: JobContext) -> ToolResult:
     if missing:
         stats["missing_files"] = missing
     return ToolResult(outputs, stats)
+
+
+def url_to_pdf(params: dict[str, Any], ctx: JobContext) -> ToolResult:
+    """Web page to PDF (D-043): the only tool that goes online, and only to the address the
+    user typed (plus the page's own pictures and style sheets). The UI confirms first."""
+    options = options_dict(params)
+    url = option_str(options, "url", "", max_len=webfetch.MAX_URL_CHARS)
+    page_size = option_choice(options, "page_size", tuple(html_prep.PAGE_SIZES), "a4")
+    orientation = option_choice(options, "orientation", ("portrait", "landscape"), "portrait")
+    margins = option_choice(options, "margins", tuple(html_prep.MARGINS), "normal")
+    background = option_bool(options, "background", True)
+    out_dir = optional_str(params, "output_dir")
+    folder = Path(out_dir) if out_dir else Path.home() / "Downloads"
+    if not folder.is_dir():
+        raise EngineError(ErrorCode.INVALID_INPUT, f"The output folder {folder} does not exist")
+
+    work = ctx.temp_dir / "web"
+    fetched = webfetch.fetch_page(url, work, ctx, start=2, end=55)
+    ctx.check_cancelled()
+    ctx.progress(60, "Converting to PDF")
+    prepared = html_prep.prepare(
+        fetched.page,
+        page_size=page_size,
+        orientation=orientation,
+        margins=margins,
+        background=background,
+    )
+    copy = work / "input.html"
+    copy.write_bytes(prepared.html)
+    produced = libreoffice.convert(copy, work, ctx, filter_name="writer_web_pdf_Export")
+    with Pdf.open(produced) as pdf:
+        pages = len(pdf.pages)
+    host = urlparse(fetched.final_url).hostname or "web page"
+    name = sanitize_stem(fetched.title or host)
+    final = commit(produced, folder / f"{name}.pdf")
+    ctx.progress(100, "Done")
+    stats: dict[str, Any] = {
+        "pages": pages,
+        "url": fetched.final_url,
+        "downloaded_bytes": fetched.bytes,
+        "resources": fetched.resources,
+    }
+    if fetched.failed:
+        stats["resources_failed"] = fetched.failed
+    return ToolResult([final], stats)
