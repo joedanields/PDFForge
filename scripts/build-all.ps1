@@ -89,6 +89,23 @@ try {
         }
     }
     $tauriArgs = @('tauri', 'build', '--bundles', 'nsis', '--config', 'src-tauri/tauri.vendor.conf.json')
+    # Auto-update (docs/06 §6, D-044): with an updater signing key, also produce the signed
+    # update artifacts (installer + .sig); PDFFORGE_UPDATE_ENDPOINT puts the endpoint into this
+    # build only. Without them the build has no update endpoint and never looks for updates.
+    $updaterConfig = @{}
+    if ($env:TAURI_SIGNING_PRIVATE_KEY) {
+        $updaterConfig.bundle = @{ createUpdaterArtifacts = $true }
+        Write-Host '==> Updater artifacts: on (TAURI_SIGNING_PRIVATE_KEY is set)' -ForegroundColor Cyan
+    }
+    if ($env:PDFFORGE_UPDATE_ENDPOINT) {
+        $updaterConfig.plugins = @{ updater = @{ endpoints = @($env:PDFFORGE_UPDATE_ENDPOINT) } }
+        Write-Host "==> Update endpoint: $env:PDFFORGE_UPDATE_ENDPOINT" -ForegroundColor Cyan
+    }
+    if ($updaterConfig.Count -gt 0) {
+        $updaterConfigPath = Join-Path $env:TEMP 'pdfforge-updater.conf.json'
+        Set-Content -Path $updaterConfigPath -Value ($updaterConfig | ConvertTo-Json -Depth 6 -Compress) -Encoding utf8
+        $tauriArgs += @('--config', $updaterConfigPath)
+    }
     if ($signed) {
         $timestamp = if ($env:PDFFORGE_SIGN_TIMESTAMP_URL) { $env:PDFFORGE_SIGN_TIMESTAMP_URL } else { 'http://timestamp.digicert.com' }
         $signConfig = @{

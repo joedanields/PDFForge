@@ -14,6 +14,8 @@ import type {
   FileStat,
   OcrLanguage,
   OpenRequest,
+  UpdateInfo,
+  UpdaterStatus,
   ProgressEvent,
   RecentOutput,
   SavedSignature,
@@ -26,6 +28,7 @@ export const EVENTS = {
   status: "engine://status",
   recentsChanged: "recents://changed",
   openFiles: "app://open-files",
+  updateAvailable: "updater://available",
 } as const;
 
 export function isTauri(): boolean {
@@ -120,6 +123,9 @@ export const api = {
   clearSignatures: () => invoke<undefined>("clear_signatures"),
   takeOpenRequests: () => invoke<OpenRequest[]>("take_open_requests"),
   contextMenuState: () => invoke<ContextMenuState>("context_menu_state"),
+  updaterStatus: () => invoke<UpdaterStatus>("updater_status"),
+  checkForUpdate: () => invoke<UpdateInfo | null>("check_for_update"),
+  installUpdate: () => invoke<undefined>("install_update"),
   setContextMenu: (enabled: boolean) => invoke<ContextMenuState>("set_context_menu", { enabled }),
   listWorkflows: () => invoke<Workflow[]>("list_workflows"),
   saveWorkflow: (workflow: Workflow) => invoke<Workflow>("save_workflow", { workflow }),
@@ -139,6 +145,13 @@ export function onEngineStatus(cb: (status: EngineStatus) => void): Promise<Unli
 export function onOpenFiles(cb: () => void): Promise<UnlistenFn> {
   return listen(EVENTS.openFiles, () => {
     cb();
+  });
+}
+
+/** A background update check (Settings → Updates) found a newer version. */
+export function onUpdateAvailable(cb: (info: UpdateInfo) => void): Promise<UnlistenFn> {
+  return listen<UpdateInfo>(EVENTS.updateAvailable, ({ payload }) => {
+    cb(payload);
   });
 }
 

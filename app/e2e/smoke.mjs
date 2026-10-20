@@ -1181,6 +1181,24 @@ if (section("language")) {
   ok("back to English");
 }
 
+if (section("updates")) {
+  console.log("Updates (off by default)");
+  await go("#/settings");
+  const expected = process.env.PDFFORGE_EXPECT_UPDATE; // e.g. "9.9.9" with a test endpoint
+  if (!expected) {
+    await page.getByTestId("updates-off").waitFor();
+    ok("repository build: updates not set up, nothing is checked");
+  } else {
+    const auto = page.getByLabel("Check for updates when PDFForge starts");
+    expect(!(await auto.isChecked()), "start-up check is off by default");
+    await page.getByRole("button", { name: "Check now" }).click();
+    await page.getByText(`Version ${expected} is available.`).waitFor({ timeout: 30_000 });
+    await page.getByRole("button", { name: `Install ${expected} and restart` }).waitFor();
+    ok(`update ${expected} found and offered (not installed)`);
+    await shot("update-found");
+  }
+}
+
 if (section("settings")) {
   console.log("Settings");
   await go("#/settings");

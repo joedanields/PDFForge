@@ -208,6 +208,11 @@ impl Engine {
         Ok(())
     }
 
+    /// Jobs submitted and not yet finished (the updater waits for none, docs/06 §6).
+    pub fn running_jobs(&self) -> usize {
+        self.inner.jobs.lock().map(|jobs| jobs.len()).unwrap_or(0)
+    }
+
     pub async fn cancel(&self, id: &str) {
         if is_valid_job_id(id) {
             // Best effort: if the engine is gone the job has already been failed.

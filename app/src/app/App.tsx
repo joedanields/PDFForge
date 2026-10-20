@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { HashRouter, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { CommandSearch } from "@/components/CommandSearch";
 import { TopBar } from "@/components/TopBar";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import { api, isTauri, onOpenFiles } from "@/engine/client";
 import { setLocale } from "@/i18n";
 import { initAppStore, useAppStore } from "@/lib/store";
@@ -56,6 +57,7 @@ function Layout() {
   return (
     <div className="flex min-h-full flex-col">
       <TopBar onSearch={() => setSearchOpen(true)} />
+      <UpdateBanner />
       <main className="flex-1">
         <Outlet />
       </main>

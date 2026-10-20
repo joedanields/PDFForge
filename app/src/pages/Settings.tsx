@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ContextMenuSetting } from "@/components/ContextMenuSetting";
 import { OcrLanguagesSettings } from "@/components/OcrLanguagesSettings";
 import { OutputFolderPicker } from "@/components/OutputFolderPicker";
+import { UpdateSettings } from "@/components/UpdateSettings";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -149,6 +150,10 @@ export function SettingsPage() {
             </Button>
           )}
         </div>
+      </Section>
+
+      <Section title={t("updates.title")}>
+        <UpdateSettings />
       </Section>
 
       <Section title={t("settings.about")}>

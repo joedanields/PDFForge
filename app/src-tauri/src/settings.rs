@@ -32,6 +32,8 @@ pub struct Settings {
     pub language: Language,
     /// The user confirmed once that "Web page to PDF" may go online (D-043).
     pub online_confirmed: bool,
+    /// Check for updates when PDFForge starts (off by default, D-044).
+    pub auto_update: bool,
     /// `None` = save next to the first input file (docs/02 common rules).
     pub default_output_dir: Option<String>,
 }

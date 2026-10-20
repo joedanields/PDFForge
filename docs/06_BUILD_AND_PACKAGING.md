@@ -114,8 +114,40 @@ ocrmypdf, pyhanko, camelot-py (optional)
   Without it the scripts print an **UNSIGNED BUILD** warning before and after the build.
 
 ## 6. Auto-update
-- Tauri updater plugin with a signed `latest.json` hosted on GitHub Releases or your server.
-- Opt-in in Settings; never auto-restart during a running job.
+Implemented with the Tauri updater plugin (`tauri-plugin-updater`, `src-tauri/src/updater.rs`, D-044) and **off by default**, for two reasons:
+1. A build only looks for updates when `plugins.updater.endpoints` in `tauri.conf.json` names an endpoint. The repository ships with `"endpoints": []`, and a Rust test fails if an endpoint is committed. Settings → Updates then says "Updates are not set up for this build".
+2. With an endpoint, PDFForge still only checks on start if the user turns on **Settings → Updates → Check for updates when PDFForge starts**. "Check now" is always manual.
+
+Installing is always user-initiated ("Install … and restart"). It is refused while a job is running, stops the engine, runs the NSIS installer in passive mode (per user, no admin) and restarts. Every update is verified against `plugins.updater.pubkey` (minisign) and must carry its signed version (`requireSignedVersion: true`), so an old genuine release cannot be served as a "new" one.
+
+### What the owner provides
+| Item | Where it goes |
+|------|---------------|
+| **Update signing key pair** (your own, *not* the dev key) | Public key → `plugins.updater.pubkey` in `app/src-tauri/tauri.conf.json` (commit it). Private key + password → a password manager / CI secret, **never** the repository. |
+| **Endpoint URL** that serves `latest.json` | `plugins.updater.endpoints` in `tauri.conf.json`, or per build with `$env:PDFFORGE_UPDATE_ENDPOINT`. GitHub Releases: `https://github.com/<owner>/<repo>/releases/latest/download/latest.json`. Own server: any HTTPS URL; `{{target}}`, `{{arch}}` and `{{current_version}}` placeholders are allowed. |
+| **Hosting** for each release | The installer `PDFForge_<version>_x64-setup.exe`, its `.sig` and `latest.json`, at the URLs named in `latest.json`. |
+
+### Commands
+```powershell
+# 1. Once: create your release key pair (keep the password; losing key or password ends updates)
+cd app
+pnpm tauri signer generate -w $HOME\.pdfforge\updater.key        # prompts for a password
+Get-Content $HOME\.pdfforge\updater.key.pub                       # -> plugins.updater.pubkey
+
+# 2. Every release: build with the private key -> installer + .sig
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content $HOME\.pdfforge\updater.key -Raw
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = '<password>'
+$env:PDFFORGE_UPDATE_ENDPOINT = 'https://github.com/<owner>/<repo>/releases/latest/download/latest.json'  # unless set in tauri.conf.json
+powershell -File scripts\build-all.ps1
+
+# 3. Write latest.json for this version, then upload installer, .sig and latest.json
+python scripts\make_update_manifest.py --base-url https://github.com/<owner>/<repo>/releases/download/v<version> --notes "What changed"
+$nsis = 'app\src-tauri\target\release\bundle\nsis'
+gh release create v<version> "$nsis\PDFForge_<version>_x64-setup.exe" "$nsis\PDFForge_<version>_x64-setup.exe.sig" "$nsis\latest.json"
+```
+`build-all.ps1` adds `bundle.createUpdaterArtifacts` only when `TAURI_SIGNING_PRIVATE_KEY` is set, so ordinary builds need no key.
+
+**Development key.** A throw-away pair was generated on the development machine: `.keys/updater-dev.key` (password `pdfforge-dev-only`) and `.keys/updater-dev.key.pub`. `.keys/` is git-ignored. Its public half is what `tauri.conf.json` holds today, so dev builds can test the full flow against a local server. **Replace the public key with your own before the first public release.**
 
 ## 7. Versioning & release
 - SemVer. Single source of version in `tauri.conf.json`; engine reports its version at handshake and the app refuses mismatched engines.

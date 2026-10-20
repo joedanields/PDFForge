@@ -340,4 +340,18 @@ export const hi: Record<MessageKey, string> = {
   "engine.stopped": "PDF इंजन बंद है",
   "engine.retry": "फिर से कोशिश करें",
   "engine.noTauri": "पूर्वावलोकन मोड: PDF इंजन केवल डेस्कटॉप ऐप में उपलब्ध है।",
+  "updates.title": "अपडेट",
+  "updates.notConfigured":
+    "इस बिल्ड के लिए अपडेट सेट नहीं हैं, इसलिए PDFForge उन्हें कभी नहीं खोजता। नए संस्करण प्रकाशक के डाउनलोड पेज से इंस्टॉल करें।",
+  "updates.auto": "PDFForge शुरू होने पर अपडेट जाँचें",
+  "updates.autoHelp":
+    "डिफ़ॉल्ट रूप से बंद। चालू करने पर PDFForge हर शुरुआत में एक बार अपडेट सर्वर से नया संस्करण पूछता है; आपकी फ़ाइलों के बारे में कुछ नहीं भेजा जाता।",
+  "updates.checkNow": "अभी जाँचें",
+  "updates.checking": "जाँच हो रही है…",
+  "updates.upToDate": "PDFForge {version} नवीनतम है।",
+  "updates.available": "संस्करण {version} उपलब्ध है।",
+  "updates.install": "{version} इंस्टॉल करें और फिर से शुरू करें",
+  "updates.installing": "डाउनलोड और इंस्टॉल हो रहा है… PDFForge फिर से शुरू होगा।",
+  "updates.banner": "PDFForge {version} उपलब्ध है।",
+  "updates.later": "बाद में",
 };

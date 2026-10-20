@@ -33,3 +33,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Updater signing keys (docs/06 §6): never commit the private key
+.keys/

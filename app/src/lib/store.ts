@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   language: "en",
   onlineConfirmed: false,
+  autoUpdate: false,
   defaultOutputDir: null,
 };
 

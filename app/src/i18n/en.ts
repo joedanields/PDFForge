@@ -334,6 +334,20 @@ export const en = {
   "engine.stopped": "PDF engine stopped",
   "engine.retry": "Retry",
   "engine.noTauri": "Preview mode: the PDF engine is only available in the desktop app.",
+  "updates.title": "Updates",
+  "updates.notConfigured":
+    "Updates are not set up for this build, so PDFForge never looks for them. Install new versions from the publisher's download page.",
+  "updates.auto": "Check for updates when PDFForge starts",
+  "updates.autoHelp":
+    "Off by default. When on, PDFForge asks the update server for a newer version once per start; nothing about your files is sent.",
+  "updates.checkNow": "Check now",
+  "updates.checking": "Checking…",
+  "updates.upToDate": "PDFForge {version} is up to date.",
+  "updates.available": "Version {version} is available.",
+  "updates.install": "Install {version} and restart",
+  "updates.installing": "Downloading and installing… PDFForge will restart.",
+  "updates.banner": "PDFForge {version} is available.",
+  "updates.later": "Later",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -6,6 +6,7 @@ pub mod launch;
 pub mod ocr;
 pub mod settings;
 pub mod signatures;
+pub mod updater;
 pub mod workflows;
 
 use std::path::PathBuf;
@@ -140,6 +141,7 @@ pub fn run() {
         }))
         .plugin(log_plugin())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let data = app_data_root();
             std::fs::create_dir_all(&data)?;
@@ -155,6 +157,7 @@ pub fn run() {
             });
             let engine = Engine::start(engine_command(&handle), sink, env!("CARGO_PKG_VERSION").into());
             app.manage(engine);
+            updater::check_on_start(&handle);
             log::info!("PDFForge {} started", env!("CARGO_PKG_VERSION"));
             Ok(())
         })
@@ -184,6 +187,9 @@ pub fn run() {
             signatures::delete_signature,
             signatures::clear_signatures,
             workflows::list_workflows,
+            updater::updater_status,
+            updater::check_for_update,
+            updater::install_update,
             workflows::save_workflow,
             workflows::delete_workflow,
             ocr::add_ocr_language,

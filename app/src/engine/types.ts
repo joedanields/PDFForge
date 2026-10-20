@@ -57,6 +57,8 @@ export interface Settings {
   language: Locale;
   /** "Web page to PDF" may go online without asking again (D-043). */
   onlineConfirmed: boolean;
+  /** Check for updates when PDFForge starts (off by default, D-044). */
+  autoUpdate: boolean;
   defaultOutputDir: string | null;
 }
 
@@ -99,6 +101,18 @@ export interface OpenRequest {
 
 /** Explorer right-click entries (src-tauri/src/contextmenu.rs). */
 export type ContextMenuState = "off" | "on" | "elsewhere";
+
+export interface UpdaterStatus {
+  configured: boolean;
+  currentVersion: string;
+}
+
+export interface UpdateInfo {
+  version: string;
+  currentVersion: string;
+  notes: string | null;
+  date: string | null;
+}
 
 export interface AppInfo {
   version: string;
