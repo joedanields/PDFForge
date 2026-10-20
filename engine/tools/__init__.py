@@ -20,6 +20,7 @@ _TARGETS: dict[str, str] = {
     "edit-pdf": "editor:edit_pdf",
     "excel-to-pdf": "office:excel_to_pdf",
     "extract-pages": "organize:extract_pages",
+    "fill-forms": "forms:fill_forms",
     "html-to-pdf": "to_pdf:html_to_pdf",
     "image-to-pdf": "to_pdf:image_to_pdf",
     "merge": "organize:merge",

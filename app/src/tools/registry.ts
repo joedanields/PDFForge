@@ -81,7 +81,8 @@ export interface ToolDef {
   requiresIntelligence?: boolean;
   /** "files": file cards (default). "pages": one PDF shown as a selectable page grid.
    * "organize": page board built from one or more PDFs. */
-  layout?: "files" | "pages" | "organize" | "editor" | "sign" | "crop" | "redact" | "compare";
+  layout?:
+    "files" | "pages" | "organize" | "editor" | "sign" | "crop" | "redact" | "compare" | "form";
   /** pages layout: the page-range option that mirrors the grid selection. */
   pageSelection?: {
     option: string;
@@ -771,6 +772,14 @@ export const redactOptions = z.object({
       { value: "300", label: "Sharp (300 dpi)" },
     ],
     "200",
+  ),
+});
+
+export const fillFormsOptions = z.object({
+  flatten: opt.bool(
+    "Flatten the form",
+    false,
+    "Turns the fields into plain page content so nobody can change them. Latin text only.",
   ),
 });
 
@@ -1493,7 +1502,7 @@ export const TOOLS: readonly ToolDef[] = [
         ? `Cropped ${s.cropped} of ${String(s.pages)} ${s.pages === 1 ? "page" : "pages"}`
         : null,
   },
-  soon({
+  {
     id: "fill-forms",
     ref: "E5",
     name: "Fill PDF Forms",
@@ -1501,10 +1510,20 @@ export const TOOLS: readonly ToolDef[] = [
     category: "edit",
     icon: TextCursorInput,
     accepts: onePdf,
+    optionsSchema: fillFormsOptions,
+    status: "available",
     priority: "could",
     phase: 4,
-    keywords: ["acroform", "fields"],
-  }),
+    engineMethod: "fill-forms",
+    actionLabel: "Save filled form",
+    keywords: ["acroform", "fields", "fill", "flatten"],
+    layout: "form",
+    summary: (s) => {
+      if (typeof s.fields_filled !== "number") return null;
+      const n = s.fields_filled;
+      return `${n} ${n === 1 ? "field" : "fields"} filled${s.flattened === true ? " · flattened" : ""}`;
+    },
+  },
 
   // ── F. Security ───────────────────────────────────────────────────────────────────────────
   {

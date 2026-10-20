@@ -43,6 +43,7 @@ const AVAILABLE = [
   "crop",
   "redact",
   "compare",
+  "fill-forms",
 ];
 const TOTAL_TOOLS = 31;
 
@@ -966,6 +967,24 @@ if (!only || only.has("echo") || echoOnly) {
     (await page.locator("main section").innerText()).includes("Hello from PDFForge"),
     "Ctrl+Enter runs Echo end to end",
   );
+}
+
+if (section("forms")) {
+  console.log("Fill PDF Forms");
+  await go("#/tool/fill-forms");
+  await addFiles("application.pdf");
+  await page.getByText("6 fields to fill").waitFor({ timeout: 30_000 });
+  ok("six fields found on two pages");
+  await page.getByLabel("name", { exact: true }).fill("Asha Raman");
+  await page.getByLabel("notes", { exact: true }).fill("First line\nSecond line");
+  await page.getByLabel("agree", { exact: true }).click();
+  await page.getByLabel("large", { exact: true }).check();
+  await page.getByLabel("city", { exact: true }).fill("Chennai");
+  await page.getByLabel("Flatten the form").click();
+  await shot("forms-ready");
+  const text = await runAndWait("Save filled form");
+  expect(text.includes("5 fields filled · flattened"), "5 fields filled and flattened");
+  expect(/application_filled( \(\d+\))?\.pdf/.test(text), "output application_filled.pdf");
 }
 
 if (section("batch")) {

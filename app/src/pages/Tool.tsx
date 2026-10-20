@@ -10,6 +10,7 @@ import { OutputFolderPicker } from "@/components/OutputFolderPicker";
 import { type Change, CompareView } from "@/components/CompareView";
 import { CropBoard } from "@/components/editor/CropBoard";
 import { EditorBoard } from "@/components/editor/EditorBoard";
+import { FormBoard } from "@/components/FormBoard";
 import { RedactBoard } from "@/components/editor/RedactBoard";
 import { SignBoard } from "@/components/editor/SignBoard";
 import { OrganizeBoard, type OrganizePlan } from "@/components/OrganizeBoard";
@@ -155,6 +156,9 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   const signTool = layout === "sign";
   const redactTool = layout === "redact";
   const editorTool = layout === "editor" || signTool || redactTool;
+  const formTool = layout === "form";
+  const [formValues, setFormValues] = useState<Record<string, string | boolean>>({});
+  const [formFieldCount, setFormFieldCount] = useState<number | null>(null);
   const [editorObjects, setEditorObjects] = useState<EditObject[]>([]);
   const [signImages, setSignImages] = useState<Record<string, string>>({});
   const editing = phase.kind === "edit" && batchItems === null;
@@ -355,6 +359,12 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
   if (!blocker && editorTool && files.length > 0 && editorObjects.length === 0) {
     blocker = t(signTool ? "sign.empty" : redactTool ? "redact.empty" : "editor.empty");
   }
+  if (!blocker && formTool && files[0]?.status === "ready") {
+    if (formFieldCount === null) blocker = t("forms.reading");
+    else if (formFieldCount === 0) blocker = t("forms.none");
+    else if (Object.keys(formValues).length === 0 && options.flatten !== true)
+      blocker = t("forms.empty");
+  }
   if (!blocker && organizeTool && files.length > 0 && !organizePlan?.pages.length) {
     blocker = t("organize.empty");
   }
@@ -444,23 +454,25 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
     const secrets =
       signTool && Object.keys(images).length > 0 ? { ...formSecrets, images } : formSecrets;
     const converted = tool.toEngine ? tool.toEngine(plain) : plain;
-    const engineOptions = redactTool
-      ? {
-          ...converted,
-          areas: editorObjects
-            .filter((o) => o.kind === "rect")
-            .map((o) => ({ page: o.page, x: o.x, y: o.y, w: o.w, h: o.h })),
-        }
-      : editorTool
-        ? { ...converted, objects: editorObjects.map(editorToEngine) }
-        : cropTool
-          ? {
-              mode: converted.mode,
-              margin: converted.margin,
-              box: cropBox,
-              pages: converted.apply === "current" ? String(cropPage + 1) : "all",
-            }
-          : converted;
+    const engineOptions = formTool
+      ? { ...converted, values: formValues }
+      : redactTool
+        ? {
+            ...converted,
+            areas: editorObjects
+              .filter((o) => o.kind === "rect")
+              .map((o) => ({ page: o.page, x: o.x, y: o.y, w: o.w, h: o.h })),
+          }
+        : editorTool
+          ? { ...converted, objects: editorObjects.map(editorToEngine) }
+          : cropTool
+            ? {
+                mode: converted.mode,
+                margin: converted.margin,
+                box: cropBox,
+                pages: converted.apply === "current" ? String(cropPage + 1) : "all",
+              }
+            : converted;
     const paramsFor = (inputs: string[]) => ({
       options: engineOptions,
       ...(Object.keys(secrets).length > 0 && { secrets }), // never stored in history
@@ -687,6 +699,22 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
               onChange={setEditorObjects}
             />
           )}
+          {formTool && files[0]?.status === "ready" && (
+            <FormBoard
+              key={files[0].key}
+              file={files[0]}
+              disabled={!editing}
+              onRemove={() => {
+                removeFile(files[0]?.key ?? "");
+                setFormValues({});
+                setFormFieldCount(null);
+              }}
+              onChange={(values, count) => {
+                setFormValues(values);
+                setFormFieldCount(count);
+              }}
+            />
+          )}
           {organizeTool && files.some((f) => f.status === "ready") && (
             <OrganizeBoard
               files={files}
@@ -698,7 +726,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
           )}
           {needsFiles &&
             files.length > 0 &&
-            !((pageTool || editorTool || cropTool) && files[0]?.status === "ready") &&
+            !((pageTool || editorTool || cropTool || formTool) && files[0]?.status === "ready") &&
             !(organizeTool && files.every((f) => f.status === "ready")) && (
               <>
                 <FileList
@@ -716,6 +744,7 @@ function ToolRunner({ tool }: { tool: ToolDef }) {
                   !pageTool &&
                   !organizeTool &&
                   !editorTool &&
+                  !formTool &&
                   !cropTool && (
                     <DropZone
                       compact

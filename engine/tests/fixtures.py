@@ -411,3 +411,30 @@ def make_scanned_text_pdf(
     for f in frames:
         f.unlink()
     return path
+
+
+def make_full_form_pdf(path: Path) -> Path:
+    """Page 1: name (text), notes (multi-line text), agree (check box), size (radio
+    small/large), country (combo box). Page 2: city (text)."""
+    c = canvas.Canvas(str(path), pagesize=A4)
+    form = c.acroForm
+    c.drawString(72, 790, "Application form")
+    form.textfield(name="name", x=72, y=740, width=250, height=22)
+    form.textfield(name="notes", x=72, y=640, width=300, height=80, fieldFlags="multiline")
+    form.checkbox(name="agree", x=72, y=600, size=16, buttonStyle="check")
+    form.radio(name="size", value="small", x=72, y=560, size=16, selected=True)
+    form.radio(name="size", value="large", x=120, y=560, size=16)
+    form.choice(
+        name="country",
+        x=72,
+        y=500,
+        width=200,
+        height=22,
+        options=["India", "Japan", "Peru"],
+        value="India",
+    )
+    c.showPage()
+    c.acroForm.textfield(name="city", x=72, y=740, width=250, height=22)
+    c.showPage()
+    c.save()
+    return path

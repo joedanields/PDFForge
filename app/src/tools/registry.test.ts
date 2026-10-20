@@ -55,6 +55,7 @@ const IMPLEMENTED = [
   "crop",
   "redact",
   "compare",
+  "fill-forms",
 ];
 
 describe("tool registry contents", () => {

@@ -20,6 +20,7 @@ a = Analysis(
         "tools.debug",
         "tools.edit",
         "tools.editor",
+        "tools.forms",
         "tools.from_pdf",
         "tools.ocr",
         "tools.office",
