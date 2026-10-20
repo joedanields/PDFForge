@@ -9,6 +9,8 @@ import { SettingsPage } from "@/pages/Settings";
 import { ToolPage } from "@/pages/Tool";
 import { chooseAndView, viewerPath } from "@/lib/viewer";
 import { ViewerPage } from "@/pages/Viewer";
+import { WorkflowEditorPage } from "@/pages/WorkflowEditor";
+import { WorkflowRunPage } from "@/pages/WorkflowRun";
 
 function Layout() {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -67,6 +69,8 @@ export function App() {
           <Route path="tool/:toolId" element={<ToolPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="view" element={<ViewerPage />} />
+          <Route path="workflows/:workflowId" element={<WorkflowEditorPage />} />
+          <Route path="workflows/:workflowId/run" element={<WorkflowRunPage />} />
           <Route path="*" element={<Home />} />
         </Route>
       </Routes>

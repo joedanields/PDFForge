@@ -991,6 +991,51 @@ if (section("batch")) {
   ok("start over returns to the drop zone");
 }
 
+if (section("workflows")) {
+  console.log("Workflows");
+  await go("#/?category=workflows");
+  await page.getByRole("button", { name: "New workflow" }).click();
+  await page.getByLabel("Name", { exact: true }).fill("Smoke flow");
+  for (const tool of ["Merge PDF", "Add Page Numbers", "Protect PDF"]) {
+    await page.getByRole("combobox", { name: "Add a step" }).click();
+    await page.getByRole("option", { name: tool, exact: true }).click();
+  }
+  const steps = page.getByRole("list", { name: "Steps" }).getByRole("listitem");
+  expect((await steps.count()) === 3, "three steps added");
+  // A non-PDF result in the middle is refused until it is the last step.
+  await page.getByRole("combobox", { name: "Add a step" }).click();
+  await page.getByRole("option", { name: "PDF to Text", exact: true }).click();
+  await page.getByRole("button", { name: "Move up" }).last().click();
+  await page.getByText("makes no PDF, so it can only be the last step").waitFor();
+  expect(
+    await page.getByRole("button", { name: "Save", exact: true }).isDisabled(),
+    "bad chain blocks saving",
+  );
+  await page.getByRole("button", { name: /^Remove PDF to Text/ }).click();
+  await shot("workflow-builder");
+  await page.getByRole("button", { name: "Save and run" }).click();
+  await page.getByRole("heading", { name: "Smoke flow" }).waitFor();
+  ok("saved and opened the run page");
+  await addFiles("statement.pdf", "contract v1.pdf");
+  await page.waitForFunction(() => document.querySelectorAll("main ol img").length === 2);
+  await page.getByLabel("Password to open", { exact: true }).fill("Flow-Pass-42");
+  await page.getByLabel("Repeat the password", { exact: true }).fill("Flow-Pass-42");
+  await page.getByRole("button", { name: "Run workflow" }).click();
+  const counts = page.getByTestId("batch-counts");
+  await counts.filter({ hasText: "1 of 1 finished" }).waitFor({ timeout: 90_000 });
+  expect((await counts.innerText()).includes("1 done"), "workflow finished");
+  const row = await page.locator('li[data-state="done"]').innerText();
+  expect(/statement_Smoke flow( \(\d+\))?\.pdf/.test(row), "output statement_Smoke flow.pdf");
+  await shot("workflow-result");
+  await go("#/?category=workflows");
+  const card = page.getByRole("listitem", { name: "Smoke flow" });
+  await card.getByText("Add Page Numbers").waitFor();
+  await card.getByRole("button", { name: "Delete" }).click();
+  await card.getByRole("button", { name: "Delete for good" }).click();
+  await card.waitFor({ state: "detached" });
+  ok("workflow listed and deleted");
+}
+
 if (section("settings")) {
   console.log("Settings");
   await go("#/settings");

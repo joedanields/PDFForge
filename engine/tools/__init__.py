@@ -44,6 +44,7 @@ _TARGETS: dict[str, str] = {
     "unlock": "security:unlock",
     "watermark": "edit:watermark",
     "word-to-pdf": "office:word_to_pdf",
+    "workflow": "workflow:workflow",
 }
 
 

@@ -1,8 +1,8 @@
-import { Workflow } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { RecentOutputs } from "@/components/RecentOutputs";
 import { ToolCard } from "@/components/ToolCard";
+import { WorkflowList } from "@/components/WorkflowList";
 import { t } from "@/i18n";
 import { useAppStore } from "@/lib/store";
 import { chipLabel, filterChips, type CategoryFilter } from "@/tools/categories";
@@ -56,10 +56,7 @@ export function Home() {
       </div>
 
       {category === "workflows" ? (
-        <div className="mx-auto flex max-w-lg flex-col items-center gap-3 rounded-card border border-dashed p-10 text-center text-text-muted">
-          <Workflow className="size-10" aria-hidden />
-          <p>{t("home.workflowsEmpty")}</p>
-        </div>
+        <WorkflowList />
       ) : (
         <ul className="grid grid-cols-2 gap-4 min-[900px]:grid-cols-3 min-[1200px]:grid-cols-4 min-[1600px]:grid-cols-5">
           {tools.map((tool) => (

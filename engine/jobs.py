@@ -104,6 +104,27 @@ class JobContext:
         if self._token.cancelled:
             raise Cancelled
 
+    def scoped(self, temp_dir: Path, start: float, end: float, label: str) -> JobContext:
+        """A context for one part of this job (a workflow step): its own ``temp_dir``, progress
+        mapped onto ``start..end`` and prefixed with ``label``; same cancellation."""
+        return _ScopedContext(self, temp_dir, start, end, label)
+
+
+class _ScopedContext(JobContext):
+    def __init__(
+        self, parent: JobContext, temp_dir: Path, start: float, end: float, label: str
+    ) -> None:
+        super().__init__(parent.job_id, temp_dir, parent._token, parent._emit)
+        self._parent = parent
+        self._start = start
+        self._end = end
+        self._label = label
+
+    def progress(self, percent: float, message: str = "") -> None:
+        pct = max(0.0, min(100.0, percent))
+        text = f"{self._label} · {message}" if message else self._label
+        self._parent.progress(self._start + (self._end - self._start) * pct / 100, text)
+
 
 ToolFn = Callable[[dict[str, Any], JobContext], ToolResult]
 

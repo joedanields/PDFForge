@@ -97,7 +97,8 @@ Last verified: 2026-10-19 — full gates green (443 pytest, 91 vitest, 26 Rust t
 |------|--------|-------|--------|-------|
 | 3.7 Licensing compliance: source archives, written offer, licences folder | done | test_licenses (3) | 9e3fc2b | JBIG-KIT + libiconv source shipped in `licenses\source`; contact address left for the owner; D-035 |
 | 3.8 Redaction UX: rebuilt-page explanation, "Run OCR on non-redacted areas" | done | test_redact (+1), vitest ResultCard (3), smoke `redact` | ee8ce25 | D-036 |
-| 4.1 Batch mode (H) | done | vitest batch (3), Rust list_folder (1), smoke `batch` | (this commit) | one job per file, 2 at a time, per-file status, retry failed, add a folder; D-037 |
+| 4.1 Batch mode (H) | done | vitest batch (3), Rust list_folder (1), smoke `batch` | f96848e | one job per file, 2 at a time, per-file status, retry failed, add a folder; D-037 |
+| 4.2 Workflows builder (G) | done | test_workflow (9), vitest workflows (5), Rust workflows (3), smoke `workflows` | (this commit) | builder with drag-reorder and inline options, run on files or a folder, example workflow; D-038 |
 
 ## Phase 3 — Editing & security
 

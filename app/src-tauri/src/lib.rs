@@ -5,6 +5,7 @@ pub mod launch;
 pub mod ocr;
 pub mod settings;
 pub mod signatures;
+pub mod workflows;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -179,6 +180,9 @@ pub fn run() {
             signatures::save_signature,
             signatures::delete_signature,
             signatures::clear_signatures,
+            workflows::list_workflows,
+            workflows::save_workflow,
+            workflows::delete_workflow,
             ocr::add_ocr_language,
             ocr::remove_ocr_language,
         ])

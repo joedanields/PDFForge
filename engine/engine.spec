@@ -30,6 +30,7 @@ a = Analysis(
         "tools.redact",
         "tools.security",
         "tools.to_pdf",
+        "tools.workflow",
     ],
     hookspath=[],
     runtime_hooks=[],

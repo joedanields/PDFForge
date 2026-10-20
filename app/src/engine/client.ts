@@ -17,6 +17,7 @@ import type {
   SavedSignature,
   Settings,
 } from "./types";
+import type { Workflow } from "@/lib/workflows";
 
 export const EVENTS = {
   engine: "engine://event",
@@ -116,6 +117,9 @@ export const api = {
   deleteSignature: (id: string) => invoke<undefined>("delete_signature", { id }),
   clearSignatures: () => invoke<undefined>("clear_signatures"),
   takeOpenRequests: () => invoke<string[]>("take_open_requests"),
+  listWorkflows: () => invoke<Workflow[]>("list_workflows"),
+  saveWorkflow: (workflow: Workflow) => invoke<Workflow>("save_workflow", { workflow }),
+  deleteWorkflow: (id: string) => invoke<undefined>("delete_workflow", { id }),
   ocrLanguages: () => invoke<OcrLanguage[]>("ocr_languages"),
   addOcrLanguage: (path: string) => invoke<OcrLanguage[]>("add_ocr_language", { path }),
   removeOcrLanguage: (code: string) => invoke<OcrLanguage[]>("remove_ocr_language", { code }),
