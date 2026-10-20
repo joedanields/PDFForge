@@ -1,27 +1,37 @@
 # Progress log
 
-> Autonomous run 2026-10-18 → 2026-10-19.
+> Autonomous runs 2026-10-18 → 2026-10-19 (Phases 1–3) and 2026-10-19 → 2026-10-20 (review follow-ups + Phase 4).
 
-## Summary for the owner (autonomous run 2026-10-18 → 2026-10-19)
+## Summary for the owner (latest run 2026-10-19 → 2026-10-20)
 
-**Done: Phases 1, 2 and 3.** 30 product tools are available (Phase 3 exit: "~29 tools");
-the remaining four tiles are Phase 4 / v2 by plan (Fill forms, Summarize, Translate, Chat).
+**Done: every item of the review list.** 32 product tools are available, and no tile says "Coming soon"; only the three opt-in Intelligence tools (v2) remain unbuilt.
 
-- **Phase 1 (core PDF tools)**: Merge, Split, Remove, Extract, Organize, Rotate, Compress,
-  Image → PDF, PDF → Image, Protect, Unlock, Page numbers, Watermark; notices; installer.
-- **Phase 2 (conversions)**: Word / PowerPoint / Excel → PDF (bundled LibreOffice),
-  PDF → Word / Excel / PowerPoint / Text (own AGPL-free converter), HTML → PDF, Text/Markdown →
-  PDF, PDF → PDF/A (2b/3b, veraPDF-validated on the dev machine), Repair, OCR (bundled Tesseract,
-  English + Tamil + Hindi, more via Settings). `scripts/fetch-vendor.ps1` downloads, SHA-256
-  verifies and trims LibreOffice and Tesseract.
-- **Phase 3 (editing & security)**: built-in viewer + "Open with PDFForge" for .pdf, Edit PDF,
-  Sign PDF (DPAPI-encrypted saved signatures), Crop, Redact (true redaction), Compare.
+- **Licensing compliance** — The installer ships a `licenses\` folder: JBIG-KIT 2.1 and GNU libiconv 1.17 source (upstream tarballs + MSYS2 recipe + SHA256SUMS) and a 3-year written offer covering every GPL/LGPL/MPL component. `THIRD_PARTY_NOTICES.txt` is regenerated from the real dependency tree (now including pyHanko, the updater and winreg). Settings → About → *Third-party licences* / *Licences and source code* (D-035).
+- **Redaction UX** — The Result screen explains that redacted pages became images. "Run OCR on non-redacted areas" is on by default; when it was off, a button restores searchable text afterwards (D-036).
+- **Phase 4, in roadmap order:**
+  - Batch mode: up to 500 files or a folder, per-file status, retry (D-037).
+  - Workflows builder: saved chains, drag-reorder, run on files or a folder (D-038).
+  - Fill PDF Forms: fill and optionally flatten (D-039).
+  - Explorer context menu: Open / Merge with PDFForge, per user, no admin (D-040).
+  - Digital certificate signing: your own PFX/P12, pyHanko (D-041).
+  - Tamil and Hindi UI (D-042).
+- **Web Page to PDF** — HTML from a URL. This is the only tool that uses the internet: it has a badge and a banner, and asks for confirmation the first time (D-043).
+- **Auto-update** — The Tauri updater is fully wired but off: the build has no endpoint and the start-up check is opt-in. What you provide and the exact commands are in [06 §6](06_BUILD_AND_PACKAGING.md#6-auto-update). A dev key pair is in the git-ignored `.keys/` folder; the private key is not committed (D-044).
+- **Installer size** — **184.6 MB → 167.5 MB** (176.1 → 159.7 MiB), even with the new features. Three changes did it: debug info stripped from `libtesseract-5.dll` (97 MB → 4 MB), LibreOffice's Libertine G fonts dropped, and a 64 MB LZMA dictionary. I also fixed a LibreOffice profile-cache bug that showed up after updates (D-045).
 
-**Blocked / not done** (nothing was skipped as blocked; these are open items):
-- Auto-update (v1.0 exit item) — needs an update server and signing keys from you (D-034).
-- Cryptographic certificate signing (F3 "Could") and Fill forms (E5) — Phase 4 per roadmap.
-- HTML → PDF from a URL (C5 footnote) — not offered; local files only (D-023).
-- PDF/A-1b — not offered (needs ICC v2 + no transparency) (D-024).
+**Needs you before distributing** (nothing was blocked; these are owner decisions):
+1. `licenses/WRITTEN_OFFER.txt` contains `<CONTACT ADDRESS …>`: put a real postal or e-mail address there (09 §4).
+2. Updates: create your own release key pair, replace `plugins.updater.pubkey`, and set the endpoint (06 §6). Until then builds never look for updates.
+3. Code signing: the build is unsigned; set `PDFFORGE_SIGN_THUMBPRINT` (06 §5).
+4. Have a native speaker review the Tamil and Hindi texts. Messages from the PDF engine and the numeric result summaries are still in English (D-042).
+
+**Known limits / not done:**
+- Explorer starts one process per selected file, so "Merge with PDFForge" from Explorer works for up to 15 files. For more, use batch mode or "Add a folder" (D-040).
+- On Windows 11 the menu entries sit under "Show more options".
+- Flattening forms supports Latin text only (D-039).
+- The Lite installer with on-demand components (roadmap Phase 4, not in this task list) is not built; D-045 estimates ~70 MB for it.
+- PDF/A-1b is still not offered (D-024).
+- `vendor/_exp` (~2 GB) holds old LibreOffice trim experiments. It is git-ignored, not shipped, and safe to delete.
 
 **Decisions** — every entry in [DECISIONS.md](DECISIONS.md) (question → see the file for the choice and reason):
 
@@ -59,18 +69,26 @@ the remaining four tiles are Phase 4 / v2 by plan (Fill forms, Summarize, Transl
   - **D-032** — True redaction without MuPDF (02 F4: "underlying text/images must be removed … verified by test")
   - **D-033** — What Compare compares and produces (02 F5, 04 §2.7)
   - **D-034** — Auto-update for v1.0 (08 Phase 3 exit, 02 §J "opt-in")
+  - **D-035** — How to meet the source obligations of the copyleft libraries inside the Tesseract build (JBIG-KIT GPL-2.0, libiconv LGPL-2.1)
+  - **D-036** — Redaction UX follow-up to D-032: how to tell users that redacted pages become images, and how to restore search
+  - **D-037** — How batch mode runs (02 §H: "select many files → process each independently, with a per-file status list")
+  - **D-038** — How workflows are stored and run (02 §G)
+  - **D-039** — Fill PDF Forms (02 E5): how fields are read and written
+  - **D-040** — Explorer context menu (02 §J) without admin rights
+  - **D-041** — Digital certificate signing (02 F3 "Could")
+  - **D-042** — Tamil and Hindi UI (02 §J) — what is translated and how
+  - **D-043** — HTML → PDF from a URL (02 C5 "URL*: the only feature that may use the network; clearly labeled and user-initiated")
+  - **D-044** — Auto-update (02 §J "opt-in", follow-up to D-034)
+  - **D-045** — Reducing the 184.6 MB installer without breaking anything
 
-Most important for you: **D-013** (the Tesseract build contains GPL-2.0 JBIG-KIT and LGPL
-libiconv — fine as a separate program but needs a source offer, see 09 §4), **D-032** (redacted
-pages become pictures), **D-034** (auto-update deferred), **D-010** (commit authorship pattern).
+Most important for you: **D-035** (source offer, contact address needed), **D-043** (the one online feature), **D-044** (updater: what you must provide), **D-045** (what was trimmed), **D-042** (translation scope), **D-010** (commit authorship pattern).
 
-**Installer**: `app\src-tauri\target\release\bundle\nsis\PDFForge_0.1.0_x64-setup.exe` —
-184.6 MB (176.1 MiB), includes LibreOffice and Tesseract (unsigned build; set `PDFFORGE_SIGN_THUMBPRINT` to sign).
+**Installer**: `app\src-tauri\target\release\bundle\nsis\PDFForge_0.1.0_x64-setup.exe` — **167.5 MB (159.7 MiB)**, was 184.6 MB. It includes LibreOffice, Tesseract and the `licenses\` folder. The build is unsigned; set `PDFFORGE_SIGN_THUMBPRINT` to sign.
 
 **Run and test the latest build** (PowerShell, repository root):
 
 ```powershell
-# full rebuild from scratch (vendor download/verify, engine freeze, installer)
+# full rebuild from scratch (vendor download/verify/trim incl. source archives, engine freeze, installer)
 .\scripts\build-all.ps1
 # all quality gates (engine lint/types/tests, UI lint/types/tests, Rust fmt/clippy/tests)
 bash scripts/check.sh
@@ -78,18 +96,18 @@ bash scripts/check.sh
 cd engine; uv run python -m tests.make_e2e_inputs $env:TEMP\pdfforge-e2e; cd ..
 $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=9222"
 Start-Process .\app\src-tauri\target\release\pdfforge.exe
-cd app; node e2e/release-smoke.mjs $env:TEMP\pdfforge-e2e      # Echo + all 30 tools
+cd app; node e2e/release-smoke.mjs $env:TEMP\pdfforge-e2e      # Echo + 34 tool jobs
 # or the full UI smoke against the dev app (pnpm tauri dev with the same debug port):
-node e2e/smoke.mjs $env:TEMP\pdfforge-e2e
+node e2e/smoke.mjs $env:TEMP\pdfforge-e2e                       # 37 sections
 ```
 
-Last verified: 2026-10-19 — full gates green (443 pytest, 91 vitest, 26 Rust tests); release smoke in the built exe passed for Echo + all 30 tools; full UI smoke (30 sections) passed.
+Last verified: 2026-10-20. Full gates green (483 pytest, 110 vitest, 37 Rust tests). The release smoke in the final built exe passed for Echo + all 34 tool jobs, including fill-forms, workflow, certificate signing and Web Page to PDF. The full UI smoke passed: 37 sections, 176 checks. The updater check was also verified against a local signed test endpoint.
 
 
 ## Now
 
-- **Current phase:** Phase 4 — Power features (after the review follow-ups)
-- **Working on:** Phase 4 tools in roadmap order
+- **Current phase:** none — Phases 1–3, the review follow-ups and the requested Phase 4 items are done
+- **Working on:** Nothing; waiting for the owner (see "Needs you" above)
 
 ## Phase 4 — Power features + review follow-ups (run 2026-10-19)
 
@@ -105,7 +123,7 @@ Last verified: 2026-10-19 — full gates green (443 pytest, 91 vitest, 26 Rust t
 | 4.6 Tamil and Hindi UI | done | vitest i18n (5), Rust settings (+1), smoke `language` | 687b797 | language picker; every key, tool and option translated; engine messages stay English; D-042 |
 | 4.7 HTML → PDF from URL ("Web Page to PDF") | done | test_url_to_pdf (10), vitest registry, smoke `web` | ab9e29c | the only online tool: badge, banner, first-time confirmation; scoped network allowance; D-043 |
 | 4.8 Auto-update (Tauri updater, off by default) | done | Rust updater (2) + settings, smoke `updates` (default and with a signed test endpoint) | 8f43f9d | endpoint + key from config, opt-in start-up check, dev key pair in git-ignored .keys/, owner steps in 06 §6; D-044 |
-| 4.9 Installer size + notices + release smoke | done | test_office (+1), release smoke 35 checks, full UI smoke 37 sections | (this commit) | 184.6 MB → 167.5 MB: stripped libtesseract debug info, dropped Libertine G fonts, 64 MB LZMA dictionary; LibreOffice profile template keyed to the install; notices regenerated (pyHanko, updater, winreg); D-045 |
+| 4.9 Installer size + notices + release smoke | done | test_office (+1), release smoke 35 checks, full UI smoke 37 sections | 943238d | 184.6 MB → 167.5 MB: stripped libtesseract debug info, dropped Libertine G fonts, 64 MB LZMA dictionary; LibreOffice profile template keyed to the install; notices regenerated (pyHanko, updater, winreg); D-045 |
 
 ## Phase 3 — Editing & security
 
@@ -155,7 +173,19 @@ Last verified: 2026-10-19 — full gates green (443 pytest, 91 vitest, 26 Rust t
 ## For the owner (decide / do on return)
 
 - Review [DECISIONS.md](DECISIONS.md) — in particular D-013 (GPL/LGPL DLLs inside the Tesseract
-  build) and the source-offer item in docs/09 §4.
+  build; source now shipped, D-035) and the contact address in `licenses/WRITTEN_OFFER.txt`.
+- Added in the 2026-10-19 → 20 run (nothing system-wide):
+  - Engine dependency **pyHanko 0.38** (MIT), with pyhanko-certvalidator, asn1crypto, oscrypto,
+    tzlocal, uritools (MIT), aiohttp and its helpers (Apache-2.0/MIT) and certifi (MPL-2.0).
+  - Rust crates **tauri-plugin-updater 2.14** (Apache-2.0/MIT) and **winreg 0.55** (MIT).
+  - Source archives downloaded to `vendor/source-archives` (git-ignored, shipped as
+    `licenses/source`).
+  - A development updater key pair in `.keys/` (git-ignored).
+  - The build now uses GNU `strip` from the existing MinGW toolchain on PATH, with the Rust
+    toolchain's `rust-objcopy` as fallback, to strip libtesseract. Nothing new was installed.
+- Testing touched per-user state on the dev machine only through the app itself: the dev
+  app's settings.json (language/theme switched and restored), and no Explorer registry entries
+  (the smoke test only reads the setting).
 - Installed for the build (inside the repo, nothing system-wide): 7-Zip 26.04 extracted to
   `vendor/_tools/7zip` (only used to unpack the Tesseract installer). Python packages added to
   the engine: python-docx, python-pptx, openpyxl (+ stub packages lxml-stubs, types-openpyxl
